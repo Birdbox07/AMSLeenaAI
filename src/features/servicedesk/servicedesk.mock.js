@@ -16,7 +16,7 @@ export function genTickets() {
     const sts = ["Open","In Progress","In Progress","Resolved","Closed"];
     return {
       id: `TKT${i+1}`, ticketNumber: `TKT${String(10001+i)}`,
-      employeeName: emp.name, category: TICKET_CATS[i%TICKET_CATS.length],
+      employeeId: emp.id, employeeName: emp.name, category: TICKET_CATS[i%TICKET_CATS.length],
       priority: pris[Math.floor(seed(i*11)*pris.length)],
       status: sts[Math.floor(seed(i*13)*sts.length)],
       assignedTo: agents[Math.floor(seed(i*17)*agents.length)],

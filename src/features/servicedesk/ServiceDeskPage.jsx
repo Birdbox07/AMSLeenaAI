@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Eye, Pencil, RefreshCw } from "lucide-react";
+import { Plus, Eye, Pencil, RefreshCw, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
@@ -9,7 +9,8 @@ import { DataTable } from "../../shared/components/DataTable";
 import { useServiceDeskQuery, useServiceDeskMutations } from "./hooks/useServiceDeskQuery";
 import { TICKET_CATS } from "./servicedesk.mock";
 import { validateNewTicketForm } from "./servicedesk.validators";
-import { useCurrentUser } from "../employees/hooks/useEmployees";
+import { useCurrentUser, useMyReportees } from "../employees/hooks/useEmployees";
+import { useHasRole } from "../../shared/access/role.store";
 import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import { CountUp } from "../../shared/components/CountUp";
 import "./servicedesk.css";
@@ -18,6 +19,13 @@ export default function ServiceDeskPage() {
   const { data: tickets } = useServiceDeskQuery();
   const { add, update } = useServiceDeskMutations();
   const CURRENT_USER = useCurrentUser();
+  const MY_REPORTEES = useMyReportees();
+  const hasManagerRole = useHasRole("Manager");
+  const isManager = MY_REPORTEES.length > 0 && hasManagerRole;
+  const isHrAdmin = useHasRole("HR Admin");
+  const reporteeIds = useMemo(() => new Set(MY_REPORTEES.map(e => e.id)), [MY_REPORTEES]);
+
+  const [tab, setTab] = useState("mine");
 
   const [initialSearch, setInitialSearch] = useState("");
   useEffect(() => {
@@ -33,19 +41,26 @@ export default function ServiceDeskPage() {
   const [editTicket, setEditTicket] = useState(null);
   const [newTicket, setNewTicket] = useState({ category: TICKET_CATS[0], priority: "Medium", subject:"", description:"" });
 
-  const filtered = useMemo(() => tickets.filter(t =>
+  const myTickets = useMemo(() => tickets.filter(t => t.employeeId === CURRENT_USER.id), [tickets, CURRENT_USER]);
+  const assignedTickets = useMemo(() => {
+    if (isHrAdmin) return tickets;
+    if (isManager) return tickets.filter(t => reporteeIds.has(t.employeeId));
+    return [];
+  }, [tickets, isHrAdmin, isManager, reporteeIds]);
+
+  const scoped = tab === "assigned" ? assignedTickets : myTickets;
+
+  const filtered = useMemo(() => scoped.filter(t =>
     (!statusFilter || t.status === statusFilter) &&
     (!priorityFilter || t.priority === priorityFilter) &&
     (!catFilter || t.category === catFilter)
-  ), [tickets, statusFilter, priorityFilter, catFilter]);
-
-  const myTickets = useMemo(() => tickets.filter(t => t.employeeName === CURRENT_USER.name), [tickets, CURRENT_USER]);
+  ), [scoped, statusFilter, priorityFilter, catFilter]);
 
   const stats = useMemo(() => ({
-    open: tickets.filter(t=>t.status==="Open").length,
-    inProgress: tickets.filter(t=>t.status==="In Progress").length,
-    resolved: tickets.filter(t=>t.status==="Resolved").length,
-  }), [tickets]);
+    open: scoped.filter(t=>t.status==="Open").length,
+    inProgress: scoped.filter(t=>t.status==="In Progress").length,
+    resolved: scoped.filter(t=>t.status==="Resolved").length,
+  }), [scoped]);
 
   const submitTicket = () => {
     const errors = validateNewTicketForm(newTicket);
@@ -55,7 +70,7 @@ export default function ServiceDeskPage() {
     }
     const ticket = {
       id: `TKT${Date.now()}`, ticketNumber: `TKT${Date.now().toString().slice(-5)}`,
-      employeeName: CURRENT_USER.name, category: newTicket.category, priority: newTicket.priority,
+      employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, category: newTicket.category, priority: newTicket.priority,
       status: "Open", assignedTo: "Unassigned", createdDate: new Date().toISOString().split("T")[0],
       subject: newTicket.subject.trim(),
     };
@@ -80,14 +95,22 @@ export default function ServiceDeskPage() {
     <div className="flex flex-col gap-4">
       <div className={cn("flex items-center justify-between flex-wrap gap-2", "animate-fade-in-up")} style={{ animationDelay: "0ms" }}>
         <h2 className="text-lg font-bold text-foreground">Service Desk</h2>
-        <div className="flex gap-2">
-          <Btn variant="primary" size="sm" onClick={() => setShowTicketForm(true)}>
-            <Plus size={14}/> Raise Ticket
-          </Btn>
-          <Btn variant="secondary" size="sm" onClick={() => myTickets.length ? setViewTicket(myTickets[0]) : toast.info("You have no tickets yet")}>
-            <Eye size={14}/> Track Ticket
-          </Btn>
-        </div>
+        <Btn variant="primary" size="sm" onClick={() => setShowTicketForm(true)}>
+          <Plus size={14}/> Raise Ticket
+        </Btn>
+      </div>
+
+      <div className={cn("flex gap-1 flex-wrap bg-muted p-1 rounded-lg w-fit", "animate-fade-in-up")} style={{ animationDelay: "30ms" }}>
+        <button onClick={() => setTab("mine")}
+          className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer bg-transparent text-muted-foreground hover:text-foreground", tab==="mine" && "bg-card! shadow text-foreground!")}>
+          <User size={14}/> My Tickets
+        </button>
+        {(isManager || isHrAdmin) && (
+          <button onClick={() => setTab("assigned")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer bg-transparent text-muted-foreground hover:text-foreground", tab==="assigned" && "bg-card! shadow text-foreground!")}>
+            <Users size={14}/> Assigned Tickets
+          </button>
+        )}
       </div>
 
       <div className={cn("grid grid-cols-3 gap-4", "animate-fade-in-up")} style={{ animationDelay: "60ms" }}>
@@ -127,13 +150,17 @@ export default function ServiceDeskPage() {
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: "180ms" }}>
-      <DataTable columns={cols} data={filtered} initialSearch={initialSearch}
+      <DataTable
+        title={tab === "assigned" ? "Assigned Tickets" : "My Tickets"}
+        columns={cols} data={filtered} initialSearch={initialSearch}
         actions={(row) => {
           const t = row;
           return (
             <>
               <button onClick={() => setViewTicket(t)} className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary"><Eye size={14}/></button>
-              <button onClick={() => setEditTicket(t)} className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-muted-foreground"><Pencil size={14}/></button>
+              {tab === "assigned" && (
+                <button onClick={() => setEditTicket(t)} className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-muted-foreground"><Pencil size={14}/></button>
+              )}
             </>
           );
         }}

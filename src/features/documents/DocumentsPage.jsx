@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { FileText, Mail, Award, Shield, User, Briefcase, LogOut, Download, Eye, RefreshCw, FolderOpen, ReceiptText } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { downloadTextFile } from "../../shared/utils/downloadTextFile";
 import { Modal } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
-import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
 import { useDocumentsQuery } from "./hooks/useDocumentsQuery";
 import { DOC_TYPES } from "./documents.mock";
@@ -62,12 +62,8 @@ export default function DocumentsPage() {
   );
 
   const cols = [
-    { key:"employeeName", label:"Employee" },
     { key:"docType", label:"Document Type" },
-    { key:"fileName", label:"File Name", render: d => <span className="text-primary text-xs">{d.fileName}</span> },
-    { key:"uploadDate", label:"Upload Date" },
-    { key:"size", label:"Size" },
-    { key:"status", label:"Status", render: d => <StatusBadge status={d.status}/> },
+    { key:"uploadDate", label:"Date" },
   ];
 
   return (

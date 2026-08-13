@@ -14,8 +14,10 @@ export function genCourses() {
     const emp = EMPLOYEES[Math.floor(seed(i*7)*EMPLOYEES.length)];
     const prog = Math.floor(seed(i*11)*101);
     const sts = prog === 0 ? "Not Started" : prog === 100 ? "Completed" : "In Progress";
+    const slug = COURSE_NAMES[i%COURSE_NAMES.length].toLowerCase().replace(/[^a-z0-9]+/g,"-");
     return {
       id: `CRS${i+1}`, courseName: COURSE_NAMES[i%COURSE_NAMES.length],
+      url: `https://learning.company.com/courses/${slug}-${i+1}`,
       category: ["Technical","Soft Skills","Finance","Compliance","Leadership"][i%5],
       duration: `${Math.floor(seed(i*13)*20)+4}h`,
       progress: prog, status: sts,

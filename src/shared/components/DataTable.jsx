@@ -9,7 +9,7 @@ import "./DataTable.css";
 
 // Generic data table. Toolbar intentionally has Search / CSV / Print only
 // (no copy-to-clipboard button) — shared by every module's table.
-export function DataTable({ columns, data, title, actions, filterExtra, initialSearch }) {
+export function DataTable({ columns, data, title, actions, filterExtra, initialSearch, hideExport, hidePrint }) {
   const [search, setSearch] = useState(initialSearch || "");
   const [sortKey, setSortKey] = useState("");
   const [sortDir, setSortDir] = useState("asc");
@@ -64,12 +64,16 @@ export function DataTable({ columns, data, title, actions, filterExtra, initialS
               className="py-1.5 pl-8 pr-3 text-sm border border-border rounded-md bg-input-background w-48 focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <button onClick={exportCSV} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Export CSV">
-            <Download size={13} /> CSV
-          </button>
-          <button onClick={() => toast.success("Printing...")} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Print">
-            <Printer size={13} />
-          </button>
+          {!hideExport && (
+            <button onClick={exportCSV} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Export CSV">
+              <Download size={13} /> CSV
+            </button>
+          )}
+          {!hidePrint && (
+            <button onClick={() => toast.success("Printing...")} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Print">
+              <Printer size={13} />
+            </button>
+          )}
         </div>
       </div>
 
