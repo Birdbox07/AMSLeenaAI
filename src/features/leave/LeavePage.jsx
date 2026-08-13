@@ -38,7 +38,6 @@ function LeaveRequestsSection() {
   const [toDate, setToDate] = useState("");
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
-  const [balanceEmpId, setBalanceEmpId] = useState(CURRENT_USER.id);
   const [showApply, setShowApply] = useState(false);
   const [viewLeave, setViewLeave] = useState(null);
   const [applyForm, setApplyForm] = useState({ leaveType: LEAVE_TYPES[0], session: LEAVE_SESSIONS[2], fromDate:"", toDate:"", reason:"" });
@@ -72,9 +71,7 @@ function LeaveRequestsSection() {
     Rejected: scoped.filter(l=>l.status==="Rejected").length,
   }), [scoped]);
 
-  const balanceEmployees = useMemo(() => [CURRENT_USER, ...MY_REPORTEES], [CURRENT_USER, MY_REPORTEES]);
-  const balanceEmp = balanceEmployees.find(e => e.id === balanceEmpId) || CURRENT_USER;
-  const selectedBalance = useMemo(() => getLeaveBalance(balanceEmp.id, leaves), [balanceEmp, leaves]);
+  const myBalance = useMemo(() => getLeaveBalance(CURRENT_USER.id, leaves), [CURRENT_USER, leaves]);
 
   const cols = [
     { key:"leaveNumber", label:"Leave No." },
@@ -124,14 +121,15 @@ function LeaveRequestsSection() {
           </div>
         )}
         <div className="flex gap-2 ml-auto">
-          {isManager && (
+          {isManager && scope === "team" ? (
             <Btn variant="secondary" size="sm" onClick={() => setShowTeamModal(true)} className="hover-lift">
               <Users size={14}/> My Reportees' Leave Balance
             </Btn>
+          ) : (
+            <Btn variant="secondary" size="sm" onClick={() => setShowBalance(true)} className="hover-lift">
+              <Calendar size={14}/> Leave Balance
+            </Btn>
           )}
-          <Btn variant="secondary" size="sm" onClick={() => { setBalanceEmpId(CURRENT_USER.id); setShowBalance(true); }} className="hover-lift">
-            <Calendar size={14}/> Leave Balance
-          </Btn>
           <Btn variant="primary" size="sm" onClick={() => setShowApply(true)} className="hover-lift">
             <Plus size={14}/> Apply Leave
           </Btn>
@@ -226,17 +224,8 @@ function LeaveRequestsSection() {
 
       <Modal open={showBalance} onClose={() => setShowBalance(false)} title="Leave Balance" maxWidth="max-w-lg"
         footer={<Btn variant="secondary" size="sm" onClick={() => setShowBalance(false)}>Close</Btn>}>
-        {isManager && (
-          <div className="flex flex-col gap-1 mb-4">
-            <label className="text-xs font-semibold text-muted-foreground">Employee</label>
-            <select value={balanceEmpId} onChange={e=>setBalanceEmpId(e.target.value)} className={inputCls}>
-              <option value={CURRENT_USER.id}>{CURRENT_USER.name} (You)</option>
-              {MY_REPORTEES.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </div>
-        )}
         <div className="-m-2 divide-y divide-border">
-          {selectedBalance.map(b => (
+          {myBalance.map(b => (
             <div key={b.type} className="py-2.5 px-2 flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-foreground">{b.type}</span>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">

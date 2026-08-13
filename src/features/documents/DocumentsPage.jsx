@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { FileText, Mail, Award, Shield, User, Briefcase, LogOut, Download, Eye, RefreshCw, FolderOpen, ReceiptText } from "lucide-react";
+import { Download, Eye, RefreshCw, FolderOpen, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { downloadTextFile } from "../../shared/utils/downloadTextFile";
@@ -12,24 +12,12 @@ import { useCurrentUser } from "../employees/hooks/useEmployees";
 import { useDocAccess, isDocTypeAllowed } from "./hooks/useDocAccess";
 import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import IncomeTaxDeclarationTab from "./components/IncomeTaxDeclarationTab";
-import { CountUp } from "../../shared/components/CountUp";
 import "./documents.css";
 
 const DOC_TABS = [
   { id: "documents", label: "Documents", icon: FolderOpen },
   { id: "taxdeclaration", label: "Income Tax Declaration", icon: ReceiptText },
 ];
-
-const DOC_TYPE_ICONS = {
-  "Payslip": FileText,
-  "Form 16": FileText,
-  "Appointment Letter": Mail,
-  "Increment Letter": Award,
-  "Medical Insurance": Shield,
-  "Identity Card": User,
-  "Offer Letter": Briefcase,
-  "Relieving Letter": LogOut,
-};
 
 export default function DocumentsPage() {
   const { data: documents } = useDocumentsQuery();
@@ -39,11 +27,6 @@ export default function DocumentsPage() {
 
   const [dateFilter, setDateFilter] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("");
-
-  const docTypeCounts = useMemo(() =>
-    visibleDocTypes.map(t => ({ type: t, count: documents.filter(d => d.docType === t).length })),
-    [documents, visibleDocTypes]
-  );
   const [viewDoc, setViewDoc] = useState(null);
   const [docTab, setDocTab] = useState("documents");
 
@@ -88,33 +71,7 @@ export default function DocumentsPage() {
 
       {docTab === "documents" && (
       <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {docTypeCounts.map(({ type, count }, i) => {
-          const Icon = DOC_TYPE_ICONS[type] || FileText;
-          const active = docTypeFilter === type;
-          return (
-            <button key={type} onClick={() => setDocTypeFilter(active ? "" : type)}
-              className={cn(
-                "text-left bg-card rounded-lg border border-border shadow-sm p-4 flex items-center gap-3 transition-shadow hover:shadow-md hover:border-primary hover-lift animate-fade-in-up",
-                active && "border-primary shadow-[0_0_0_1px_var(--primary)]"
-              )}
-              style={{ animationDelay: `${120 + i*40}ms` }}>
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-secondary text-primary animate-pop-in",
-                active && "bg-primary text-primary-foreground"
-              )}>
-                <Icon size={18}/>
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-foreground"><CountUp value={count}/></p>
-                <p className="text-[11px] font-medium text-muted-foreground truncate">{type}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "300ms" }}>
+      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-muted-foreground">Document Type</label>
           <select
@@ -127,7 +84,7 @@ export default function DocumentsPage() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Upload Date</label>
+          <label className="text-xs font-semibold text-muted-foreground">Date</label>
           <input
             type="date"
             value={dateFilter}
