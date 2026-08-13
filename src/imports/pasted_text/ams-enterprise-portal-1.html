@@ -1,0 +1,315 @@
+
+You are a Principal Software Architect, Senior UI/UX Designer, and Enterprise Frontend Engineer.
+Your task is to build a production-ready Attendance Management System (AMS) that will later be integrated into Microsoft Teams as a Teams Tab and connected to an ASP.NET Web API backend.
+This application is intended for enterprise use by employees, managers, HR, and administrators.
+The application should resemble Microsoft enterprise products such as:
+Microsoft Teams
+Microsoft 365
+Azure Portal
+Dynamics 365
+Power BI
+ServiceNow
+SAP Fiori
+This is not a public website. It must feel like a premium internal corporate application.
+Technology
+You may use any suitable frontend libraries.
+Preferred Libraries
+HTML5
+CSS3
+JavaScript (ES6)
+jQuery
+Bootstrap 5
+Bootstrap Icons
+Font Awesome
+DataTables
+DataTables Responsive
+DataTables Buttons
+JSZip
+pdfmake
+Chart.js
+ApexCharts
+SweetAlert2
+Select2
+Flatpickr
+Animate.css
+Use CDN links.
+Everything should initially be built inside one HTML file. Later I'll separate it into modules.
+Project Name
+Attendance Management System (AMS)
+Subtitle:
+Enterprise Employee Attendance & Workforce Management Portal
+Design Requirements
+Follow Microsoft's Fluent Design System.
+The application should closely resemble Microsoft Teams.
+Use:
+Fluent UI styling
+Teams color palette
+Professional typography
+Rounded corners
+Subtle shadows
+Enterprise spacing
+Modern icons
+Responsive layouts
+Smooth animations
+Avoid flashy consumer-style UI.
+Layout
+Left Sidebar (Collapsible)
+Include:
+Dashboard
+Employee Directory
+Attendance
+Leave Management
+Documents
+Policies
+Service Desk
+Learning Portal
+Holiday Calendar
+Organization Hierarchy
+Reports
+Settings
+Features
+Collapsible
+Responsive
+Active menu highlighting
+Nested menu support
+Icons for every menu
+Top Navigation
+Include
+Company Logo
+Attendance Management System
+Breadcrumb
+Global Search
+Notifications
+Messages
+User Profile
+Theme Switcher
+Settings
+Sticky header.
+Dashboard
+Display KPI cards only.
+Examples
+Total Employees
+Present Today
+Absent Today
+On Leave
+Pending Leave Requests
+Open Service Tickets
+Active Policies
+Upcoming Holidays
+Below the KPI cards, display:
+Attendance Trend Chart
+Department-wise Attendance
+Leave Summary
+Recent Announcements
+Core Design Principle
+Business records should never be shown in cards.
+Use responsive enterprise tables for all business data.
+Tables
+Every module must use DataTables.
+Features
+Responsive
+Global Search
+Column Search
+Column Filters
+Pagination
+Sorting
+Sticky Header
+Export Excel
+Export CSV
+Export PDF
+Print
+Copy
+Column Visibility
+Loading Indicator
+Tables must look like enterprise applications.
+Employee Directory
+Display employees in a responsive DataTable.
+Columns
+Employee ID
+Employee Name
+Designation
+Department
+Email
+Mobile
+Manager
+Status
+Location
+Features
+Search
+Department Filter
+Designation Filter
+Status Filter
+Export
+View Employee
+Selecting an employee should update related modules such as Documents.
+Attendance
+Default date range should automatically be Current Month.
+Provide filters
+Date Range
+Employee
+Department
+Location
+Display
+Working Days
+Present
+Absent
+Late
+Leave
+Total Hours
+Overtime
+Use realistic dummy attendance records.
+Leave Management
+Show leave requests.
+Columns
+Leave Number
+Employee
+Leave Type
+From Date
+To Date
+Days
+Status
+Approver
+Managers should see only their reporting employees.
+Documents
+Documents should load based on the currently selected employee.
+Example
+Payslip
+Form 16
+Appointment Letter
+Increment Letter
+Medical Insurance
+Identity Card
+Display using DataTables.
+Later these will come from Web APIs.
+Policies
+Show policies in searchable tables.
+Include
+Policy Name
+Department
+Version
+Effective Date
+Download
+Service Desk
+Display tickets.
+Columns
+Ticket Number
+Category
+Priority
+Status
+Assigned To
+Created Date
+Include Raise Ticket and Track Ticket actions.
+Learning Portal
+Display courses in DataTables.
+Include
+Course
+Category
+Duration
+Progress
+Completion Status
+Holiday Calendar
+Display holidays in both:
+DataTable
+Calendar View
+Organization Hierarchy
+This is an important feature.
+Managers should see:
+Their Reporting Manager
+Themselves
+Their Direct Reports
+Team Hierarchy
+Create an expandable organizational tree using dummy data.
+Support
+Expand
+Collapse
+Search
+Employee Details
+Reports
+Include
+Attendance Reports
+Leave Reports
+Employee Reports
+Service Desk Reports
+Every report must support export.
+Search & Filters
+Every module should support:
+Date Filter
+Department Filter
+Employee Filter
+Designation Filter
+Location Filter
+Manager Filter
+Status Filter
+Filters should work together.
+Dummy Data
+Generate realistic enterprise dummy data.
+Minimum
+100 Employees
+500 Attendance Records
+100 Leave Requests
+200 Service Tickets
+100 Employee Documents
+50 Policies
+50 Learning Courses
+50 Holidays
+Store all dummy data in JavaScript arrays so that replacing them with ASP.NET Web API calls later is simple.
+Architecture
+Write modular JavaScript with service classes.
+Example
+EmployeeService
+AttendanceService
+LeaveService
+DocumentService
+PolicyService
+DashboardService
+HierarchyService
+ReportService
+All UI should consume these services so API integration later requires minimal changes.
+Responsive Design
+The application must work perfectly on:
+Desktop
+Laptop
+Tablet
+Mobile
+The sidebar should automatically collapse on smaller screens.
+All DataTables must remain responsive.
+Additional UX Features
+Light/Dark Theme
+Theme saved in LocalStorage
+Skeleton loading
+SweetAlert dialogs
+Toast notifications
+Keyboard accessibility
+Smooth transitions
+Enterprise-level spacing and alignment
+Code Quality
+Produce production-quality code with:
+Clean HTML
+Well-organized CSS
+Modular JavaScript
+Reusable components
+Proper comments
+API-ready architecture
+No duplicated code
+Future Integration
+Design the application so it can later integrate with:
+ASP.NET Web API (.NET Framework/.NET Core)
+SQL Server
+Microsoft Teams Tabs
+Azure AD Authentication
+Microsoft Graph API
+Final Output
+Generate one complete HTML file that includes:
+Responsive enterprise layout
+Microsoft Teams–inspired Fluent UI
+Left navigation
+Top navigation
+Dashboard
+Responsive DataTables with filtering and export
+Charts
+Organization hierarchy
+Employee-specific document loading
+Current-month attendance filtering
+Realistic dummy data
+Clean, production-ready, API-ready code
+The final result should look like a polished enterprise Attendance Management System suitable for deployment inside Microsoft Teams and later integration with ASP.NET Web APIs.
