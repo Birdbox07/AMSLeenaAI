@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Download, Pencil, RefreshCw, UploadCloud } from "lucide-react";
+import { Plus, Download, Pencil, RefreshCw, UploadCloud, Folder, ChevronUp, ChevronDown, ChevronLeft, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { DEPTS } from "../../shared/mock/constants";
 import { cn } from "../../shared/utils/cn";
@@ -10,23 +10,49 @@ import { DataTable } from "../../shared/components/DataTable";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { usePoliciesQuery, usePolicyMutations } from "./hooks/usePoliciesQuery";
 import { validatePolicyForm } from "./policies.validators";
+import { POLICY_TYPES, POLICY_FOLDERS_BY_TYPE } from "./policies.mock";
 import { useHasRole } from "../../shared/access/role.store";
 import "./policies.css";
 
-const CATEGORIES = ["HR","IT","Finance","Operations","Compliance"];
-const emptyForm = { policyName: "", category: "", department: "", version: "v1.0", effectiveDate: "", status: "Active", fileName: "" };
+const emptyForm = { policyName: "", policyType: "HR Policies", folder: "", department: "", version: "v1.0", effectiveDate: "", status: "Active", fileName: "" };
 
 export default function PoliciesPage() {
   const { data: POLICIES } = usePoliciesQuery();
   const { add, update } = usePolicyMutations();
   const isHrAdmin = useHasRole("HR Admin");
-  const [catFilter, setCatFilter] = useState("");
+
+  const [policyType, setPolicyType] = useState("HR Policies");
+  const [viewMode, setViewMode] = useState("folder");
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [foldersOpen, setFoldersOpen] = useState(true);
+
   const [deptFilter, setDeptFilter] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
   const [editing, setEditing] = useState(null); // null = closed, {} = add, {...policy} = edit
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
 
-  const openAdd = () => { setEditing({}); setForm(emptyForm); setErrors({}); };
+  const scoped = useMemo(() => POLICIES.filter(p => p.policyType === policyType), [POLICIES, policyType]);
+
+  const folderNames = useMemo(() => Object.keys(POLICY_FOLDERS_BY_TYPE[policyType] || {}), [policyType]);
+  const folderCounts = useMemo(() => {
+    const counts = {};
+    folderNames.forEach(f => { counts[f] = 0; });
+    scoped.forEach(p => { counts[p.folder] = (counts[p.folder] || 0) + 1; });
+    return counts;
+  }, [scoped, folderNames]);
+
+  const switchPolicyType = (pt) => { setPolicyType(pt); setSelectedFolder(null); setDeptFilter(""); setFolderFilter(""); };
+  const switchViewMode = (v) => { setViewMode(v); setSelectedFolder(null); };
+
+  const folderArticles = useMemo(() => selectedFolder ? scoped.filter(p => p.folder === selectedFolder) : [], [scoped, selectedFolder]);
+
+  const tableFiltered = useMemo(() => scoped.filter(p =>
+    (!folderFilter || p.folder === folderFilter) &&
+    (!deptFilter || p.department === deptFilter || p.department === "All")
+  ), [scoped, folderFilter, deptFilter]);
+
+  const openAdd = () => { setEditing({}); setForm({ ...emptyForm, policyType, folder: selectedFolder || "" }); setErrors({}); };
   const openEdit = (policy) => { setEditing(policy); setForm({ ...emptyForm, ...policy }); setErrors({}); };
   const closeModal = () => setEditing(null);
 
@@ -45,23 +71,35 @@ export default function PoliciesPage() {
     closeModal();
   };
 
-  const filtered = useMemo(() => POLICIES.filter(p =>
-    (!catFilter || p.category === catFilter) &&
-    (!deptFilter || p.department === deptFilter || p.department === "All")
-  ), [POLICIES, catFilter, deptFilter]);
+  const downloadPolicy = (p) => {
+    const fileName = p.fileName || `${p.policyName.replace(/\s+/g,"_")}.txt`;
+    downloadTextFile(fileName, `${p.policyName}\nType: ${p.policyType}\nFolder: ${p.folder}\nDepartment: ${p.department}\nVersion: ${p.version}\nEffective Date: ${p.effectiveDate}\nStatus: ${p.status}`);
+    toast.success(`Downloading ${fileName}`);
+  };
 
   const cols = [
     { key:"policyName", label:"Policy Name", render: p => <span className="font-medium">{p.policyName}</span> },
-    { key:"category", label:"Category", render: p => <StatusBadge status={p.category}/> },
+    { key:"folder", label:"Folder" },
     { key:"department", label:"Department" },
     { key:"version", label:"Version" },
     { key:"effectiveDate", label:"Effective Date" },
     { key:"status", label:"Status", render: p => <StatusBadge status={p.status}/> },
   ];
 
+  const actions = (p) => (
+    <>
+      <button onClick={() => downloadPolicy(p)}
+        className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary" title="Download"><Download size={14}/></button>
+      {isHrAdmin && (
+        <button onClick={() => openEdit(p)}
+          className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-muted-foreground" title="Edit"><Pencil size={14}/></button>
+      )}
+    </>
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between animate-fade-in-up" style={{ animationDelay: "0ms" }}>
+      <div className="flex items-center justify-between flex-wrap gap-2 animate-fade-in-up" style={{ animationDelay: "0ms" }}>
         <h2 className="text-lg font-bold text-foreground">Policies</h2>
         {isHrAdmin && (
           <Btn variant="primary" size="sm" onClick={openAdd}>
@@ -69,49 +107,94 @@ export default function PoliciesPage() {
           </Btn>
         )}
       </div>
-      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "60ms" }}>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Category</label>
-          <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">All Categories</option>
-            {["HR","IT","Finance","Operations","Compliance"].map(c=><option key={c}>{c}</option>)}
-          </select>
+
+      <div className="flex items-center justify-between flex-wrap gap-2 animate-fade-in-up" style={{ animationDelay: "30ms" }}>
+        <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
+          {POLICY_TYPES.map(pt => (
+            <button key={pt} onClick={() => switchPolicyType(pt)}
+              className={cn("py-1.5 px-4 text-sm font-medium rounded-md transition-colors border-none cursor-pointer",
+                policyType===pt ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+              {pt}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Department</label>
-          <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">All Departments</option>
-            {DEPTS.map(d=><option key={d}>{d}</option>)}
-          </select>
+        <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
+          <button onClick={() => switchViewMode("folder")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer",
+              viewMode==="folder" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <LayoutGrid size={13}/> Folder View
+          </button>
+          <button onClick={() => switchViewMode("table")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer",
+              viewMode==="table" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <List size={13}/> Table View
+          </button>
         </div>
-        <Btn variant="ghost" size="sm" onClick={() => { setCatFilter(""); setDeptFilter(""); }}>
-          <RefreshCw size={13}/> Reset
-        </Btn>
       </div>
-      <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
-        <DataTable
-          columns={cols}
-          data={filtered}
-          hideExport
-          hidePrint
-          actions={(p) => (
-            <>
-              <button onClick={() => {
-                const fileName = p.fileName || `${p.policyName.replace(/\s+/g,"_")}.txt`;
-                downloadTextFile(fileName, `${p.policyName}\nCategory: ${p.category}\nDepartment: ${p.department}\nVersion: ${p.version}\nEffective Date: ${p.effectiveDate}\nStatus: ${p.status}`);
-                toast.success(`Downloading ${fileName}`);
-              }}
-                className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary" title="Download"><Download size={14}/></button>
-              {isHrAdmin && (
-                <button onClick={() => openEdit(p)}
-                  className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-muted-foreground" title="Edit"><Pencil size={14}/></button>
-              )}
-            </>
-          )}
-        />
-      </div>
+
+      {viewMode === "folder" ? (
+        selectedFolder ? (
+          <div className="flex flex-col gap-4 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSelectedFolder(null)}
+                className="flex items-center gap-1 text-sm text-primary font-medium bg-transparent border-none cursor-pointer hover:underline">
+                <ChevronLeft size={15}/> Back to Folders
+              </button>
+              <span className="text-sm text-muted-foreground">/ {policyType} / <span className="text-foreground font-medium">{selectedFolder}</span></span>
+            </div>
+            <DataTable columns={cols} data={folderArticles} hideExport hidePrint actions={actions}/>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+            <button onClick={() => setFoldersOpen(v=>!v)}
+              className="flex items-center gap-1.5 text-sm font-semibold text-foreground bg-transparent border-none cursor-pointer w-fit">
+              {foldersOpen ? <ChevronUp size={15}/> : <ChevronDown size={15}/>} Folders
+            </button>
+            {foldersOpen && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {folderNames.map((f, i) => (
+                  <button key={f} onClick={() => setSelectedFolder(f)}
+                    style={{ animationDelay: `${i*30}ms` }}
+                    className={cn("text-left bg-card rounded-lg border border-border shadow-sm p-4 flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:border-primary hover:-translate-y-0.5 cursor-pointer", "hover-lift", "animate-fade-in-up")}>
+                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Folder size={20}/>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-foreground truncate">{f}</p>
+                      <p className="text-xs text-muted-foreground">{folderCounts[f] || 0} Article{folderCounts[f]===1?"":"s"}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      ) : (
+        <div className="flex flex-col gap-4 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+          <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted-foreground">Folder</label>
+              <select value={folderFilter} onChange={e=>setFolderFilter(e.target.value)}
+                className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">All Folders</option>
+                {folderNames.map(f=><option key={f}>{f}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted-foreground">Department</label>
+              <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
+                className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">All Departments</option>
+                {DEPTS.map(d=><option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <Btn variant="ghost" size="sm" onClick={() => { setFolderFilter(""); setDeptFilter(""); }}>
+              <RefreshCw size={13}/> Reset
+            </Btn>
+          </div>
+          <DataTable columns={cols} data={tableFiltered} hideExport hidePrint actions={actions}/>
+        </div>
+      )}
 
       <Modal open={!!editing} onClose={closeModal} title={editing?.id ? "Edit Policy" : "Add Policy"} maxWidth="max-w-lg"
         footer={
@@ -135,13 +218,22 @@ export default function PoliciesPage() {
             {form.fileName && <span className="text-xs text-muted-foreground">Selected: {form.fileName}</span>}
           </FormField>
         )}
-        <FormField label="Category">
-          <select value={form.category} onChange={e=>setForm(f=>({...f, category:e.target.value}))} className={inputCls}>
-            <option value="">Select category</option>
-            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-          </select>
-          {errors.category && <span className="text-xs text-destructive">{errors.category}</span>}
-        </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Policy Type">
+            <select value={form.policyType} onChange={e=>setForm(f=>({...f, policyType:e.target.value, folder:""}))} className={inputCls}>
+              {POLICY_TYPES.map(pt=><option key={pt}>{pt}</option>)}
+            </select>
+            {errors.policyType && <span className="text-xs text-destructive">{errors.policyType}</span>}
+          </FormField>
+          <FormField label="Folder">
+            <input list="policy-folder-options" value={form.folder} onChange={e=>setForm(f=>({...f, folder:e.target.value}))}
+              placeholder="e.g. Leave, Payroll..." className={inputCls}/>
+            <datalist id="policy-folder-options">
+              {Object.keys(POLICY_FOLDERS_BY_TYPE[form.policyType] || {}).map(f => <option key={f} value={f}/>)}
+            </datalist>
+            {errors.folder && <span className="text-xs text-destructive">{errors.folder}</span>}
+          </FormField>
+        </div>
         <FormField label="Department">
           <select value={form.department} onChange={e=>setForm(f=>({...f, department:e.target.value}))} className={inputCls}>
             <option value="">Select department</option>
