@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
   # Attendence Management System
 
@@ -9,3 +10,6 @@
 
   Run `npm run dev` to start the development server.
   
+=======
+# AMSLeenaAI
+>>>>>>> 34b3c3ffb2a564e04b2756c1e8d1a56eb24647b9
