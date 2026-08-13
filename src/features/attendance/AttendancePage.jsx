@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, RefreshCw, Table2, CalendarDays, Clock, LogOut } from "lucide-react";
+import { Users, RefreshCw, Table2, CalendarDays } from "lucide-react";
 import { cn } from "../../shared/utils/cn";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
@@ -18,53 +18,115 @@ function dayEvent(record) {
   if (record.status === "Leave") {
     const leaveType = LEAVE_TYPE_BY_EMP_DATE.get(`${record.employeeId}_${record.date}`);
     if (leaveType === "On Duty") return { label: "On Duty", status: "On Duty" };
+    if (leaveType === "Forgot to Swipe") return { label: "Forgot to Swipe", status: "Forgot to Swipe" };
     return { label: leaveType || "Leave", status: "Leave" };
   }
   if (record.status === "Absent") return { label: "Forgot to Swipe", status: "Forgot to Swipe" };
   return { label: record.status, status: record.status };
 }
 
-function AttendanceCalendar({ records }) {
-  const sorted = useMemo(() => [...records].sort((a,b) => a.date.localeCompare(b.date)), [records]);
-  if (sorted.length === 0) {
-    return <p className="text-sm text-muted-foreground py-8 text-center">No attendance records in this range.</p>;
-  }
+const WEEKDAY_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const CELL_TINT = {
+  Present: "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800/40",
+  Late: "bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-800/40",
+  Leave: "bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800/40",
+  Holiday: "bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-800/40",
+  "On Duty": "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-800/40",
+  "Forgot to Swipe": "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800/40",
+};
+
+function getMonthWeeks(year, month) {
+  const startOffset = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+function AttendanceCalendar({ records, fromDate, toDate }) {
+  const recordsByDate = useMemo(() => {
+    const m = new Map();
+    records.forEach(r => m.set(r.date, r));
+    return m;
+  }, [records]);
+
+  const months = useMemo(() => {
+    const start = new Date(`${fromDate}T00:00:00`);
+    const end = new Date(`${toDate}T00:00:00`);
+    const list = [];
+    let y = start.getFullYear(), m = start.getMonth();
+    const endY = end.getFullYear(), endM = end.getMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      list.push({ year: y, month: m });
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return list;
+  }, [fromDate, toDate]);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {sorted.map(r => {
-        const ev = dayEvent(r);
-        const weekday = new Date(r.date).toLocaleDateString("en", { weekday: "short" });
-        return (
-          <div key={r.id} className="bg-card rounded-lg border border-border shadow-sm p-4 flex flex-col gap-2.5 hover-lift animate-fade-in-up">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{r.date}</p>
-                <p className="text-[11px] text-muted-foreground">{weekday}</p>
-              </div>
-              <StatusBadge status={ev.status}/>
+    <div className="flex flex-col gap-6">
+      {months.map(({ year, month }) => (
+        <div key={`${year}-${month}`} className="bg-card rounded-lg border border-border shadow-sm p-4 overflow-x-auto">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
+            {new Date(year, month, 1).toLocaleDateString("en", { month: "long", year: "numeric" })}
+          </h3>
+          <div className="min-w-[630px]">
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+              {WEEKDAY_LABELS.map(w => (
+                <div key={w} className="text-center text-[11px] font-semibold text-muted-foreground py-1">{w}</div>
+              ))}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-md bg-secondary/50 py-2 px-2.5 flex items-center gap-2">
-                <Clock size={13} className="text-primary shrink-0"/>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Check In</p>
-                  <p className="text-xs font-semibold text-foreground">{r.checkIn}</p>
+            <div className="flex flex-col gap-1.5">
+              {getMonthWeeks(year, month).map((week, wi) => (
+                <div key={wi} className="grid grid-cols-7 gap-1.5">
+                  {week.map((date, di) => {
+                    if (!date) return <div key={di} className="min-h-[86px] rounded-md"/>;
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+                    const inRange = dateStr >= fromDate && dateStr <= toDate;
+                    const record = recordsByDate.get(dateStr);
+                    const isHoliday = HOLIDAY_DATA.some(h => h.date === dateStr);
+                    let ev = null;
+                    if (record) ev = dayEvent(record);
+                    else if (isHoliday && inRange) ev = { label: "Holiday", status: "Holiday" };
+
+                    return (
+                      <div key={di} className={cn(
+                        "min-h-[86px] rounded-md border p-1.5 flex flex-col gap-1 transition-colors",
+                        ev ? (CELL_TINT[ev.status] || "border-border") : "border-border/50",
+                        !inRange && "opacity-40"
+                      )}>
+                        <span className="text-[11px] font-semibold text-foreground">{date.getDate()}</span>
+                        {ev && (
+                          <>
+                            <span className="text-[10px] font-semibold leading-tight text-foreground truncate" title={ev.label}>{ev.label}</span>
+                            {record && (record.checkIn !== "-" || record.checkOut !== "-") && (
+                              <span className="text-[9.5px] text-muted-foreground leading-tight">{record.checkIn} – {record.checkOut}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-              <div className="rounded-md bg-secondary/50 py-2 px-2.5 flex items-center gap-2">
-                <LogOut size={13} className="text-primary shrink-0"/>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Check Out</p>
-                  <p className="text-xs font-semibold text-foreground">{r.checkOut}</p>
-                </div>
-              </div>
+              ))}
             </div>
-            {ev.label !== r.status && (
-              <p className="text-xs text-muted-foreground">{ev.label}</p>
-            )}
           </div>
-        );
-      })}
+          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border">
+            {Object.keys(CELL_TINT).map(status => (
+              <span key={status} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className={cn("w-2.5 h-2.5 rounded-sm border shrink-0", CELL_TINT[status])}/>
+                {status}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -224,7 +286,7 @@ export default function AttendancePage() {
 
       <div className="animate-fade-in-up" style={{ animationDelay: "480ms" }}>
         {viewMode === "calendar" && canShowCalendar ? (
-          <AttendanceCalendar records={filtered}/>
+          <AttendanceCalendar records={filtered} fromDate={fromDate} toDate={toDate}/>
         ) : (
           <DataTable columns={cols} data={filtered}/>
         )}
