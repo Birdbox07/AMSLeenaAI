@@ -1,7 +1,12 @@
 import { seed, genDate } from "../../shared/mock/constants";
 import { EMPLOYEES } from "../employees/employees.mock";
 
-export const TICKET_CATS = ["IT Support","HR Query","Payroll Issue","Access Request","Facility","Travel","Admin","Compliance","ID Card","Lunch","Repair and Maintenance","Stationary"];
+export const TICKET_CATS = [
+  "Admin","Login Issue","Medical Insurance","Payroll/Salary","Provident Fund/PF","Relocation",
+  "Access Request/ID Card","Visitor Lunch","Stationery","Repair and Maintenance","Onboarding","IJP",
+  "Learning & Development","Statutory Compliance","Talent Management","Performance Management",
+  "Prestige Stars","Others",
+];
 export const TICKET_SUBJECTS = [
   "Laptop not turning on","VPN access issue","Salary discrepancy","New software installation",
   "Office chair replacement","Travel reimbursement pending","ID card lost","Policy clarification needed",

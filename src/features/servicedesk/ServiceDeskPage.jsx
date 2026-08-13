@@ -1,14 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Eye, Pencil, RefreshCw, User, Users } from "lucide-react";
+import { Plus, Eye, Pencil, RefreshCw, User, Users, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
-import { DEPTS } from "../../shared/mock/constants";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
 import { useServiceDeskQuery, useServiceDeskMutations } from "./hooks/useServiceDeskQuery";
-import { useServiceDeskCategoryOptionsQuery } from "./hooks/useServiceDeskCategoryOptionsQuery";
 import { TICKET_CATS } from "./servicedesk.mock";
 import { validateNewTicketForm } from "./servicedesk.validators";
 import { useCurrentUser, useMyReportees } from "../employees/hooks/useEmployees";
@@ -17,29 +15,9 @@ import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import { CountUp } from "../../shared/components/CountUp";
 import "./servicedesk.css";
 
-// Labels for the category-specific extra fields, used both to render the
-// Raise Ticket form and to display a submitted ticket's categoryDetails.
-const CATEGORY_FIELD_LABELS = {
-  idCardRequestType: "ID Card Request Type",
-  lunchRequestType: "Lunch Request Type",
-  lunchFromDate: "From Date",
-  lunchToDate: "To Date",
-  lunchCount: "Count",
-  repairItem: "Repair Item",
-  repairCount: "Count",
-  repairFloor: "Floor",
-  stationaryCategory: "Stationary Category",
-  stationaryItem: "Stationary Item",
-  stationaryQuantity: "Quantity",
-  stationaryUnit: "Unit",
-  stationaryDepartment: "Department",
-  stationaryFloor: "Floor",
-};
-
 export default function ServiceDeskPage() {
   const { data: tickets } = useServiceDeskQuery();
   const { add, update } = useServiceDeskMutations();
-  const { data: catOptions } = useServiceDeskCategoryOptionsQuery();
   const CURRENT_USER = useCurrentUser();
   const MY_REPORTEES = useMyReportees();
   const hasManagerRole = useHasRole("Manager");
@@ -61,8 +39,7 @@ export default function ServiceDeskPage() {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [viewTicket, setViewTicket] = useState(null);
   const [editTicket, setEditTicket] = useState(null);
-  const [newTicket, setNewTicket] = useState({ category: TICKET_CATS[0], priority: "Medium", subject:"", description:"" });
-  const [categoryDetails, setCategoryDetails] = useState({});
+  const [newTicket, setNewTicket] = useState({ category: TICKET_CATS[0], priority: "Medium", subject:"", description:"", attachmentName:"" });
 
   const myTickets = useMemo(() => tickets.filter(t => t.employeeId === CURRENT_USER.id), [tickets, CURRENT_USER]);
   const assignedTickets = useMemo(() => {
@@ -96,21 +73,17 @@ export default function ServiceDeskPage() {
       employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, category: newTicket.category, priority: newTicket.priority,
       status: "Open", assignedTo: "Unassigned", createdDate: new Date().toISOString().split("T")[0],
       subject: newTicket.subject.trim(),
-      categoryDetails: Object.keys(categoryDetails).length ? categoryDetails : undefined,
+      attachmentName: newTicket.attachmentName || undefined,
     };
     add(ticket);
     toast.success(`Ticket ${ticket.ticketNumber} raised successfully!`);
     setShowTicketForm(false);
-    setNewTicket({ category: TICKET_CATS[0], priority:"Medium", subject:"", description:"" });
-    setCategoryDetails({});
+    setNewTicket({ category: TICKET_CATS[0], priority:"Medium", subject:"", description:"", attachmentName:"" });
   };
-
-  const setDetail = (key, value) => setCategoryDetails(d => ({ ...d, [key]: value }));
 
   const closeTicketForm = () => {
     setShowTicketForm(false);
-    setNewTicket({ category: TICKET_CATS[0], priority:"Medium", subject:"", description:"" });
-    setCategoryDetails({});
+    setNewTicket({ category: TICKET_CATS[0], priority:"Medium", subject:"", description:"", attachmentName:"" });
   };
 
   const cols = [
@@ -127,7 +100,7 @@ export default function ServiceDeskPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className={cn("flex items-center justify-between flex-wrap gap-2", "animate-fade-in-up")} style={{ animationDelay: "0ms" }}>
-        <h2 className="text-lg font-bold text-foreground">Service Desk</h2>
+        <h2 className="text-lg font-bold text-foreground">HR-SUPPORT</h2>
         <Btn variant="primary" size="sm" onClick={() => setShowTicketForm(true)}>
           <Plus size={14}/> Raise Ticket
         </Btn>
@@ -200,25 +173,21 @@ export default function ServiceDeskPage() {
       />
       </div>
 
-      <Modal open={showTicketForm} onClose={closeTicketForm} title="Raise New Ticket" maxWidth="max-w-2xl"
+      <Modal open={showTicketForm} onClose={closeTicketForm} title="Raise New Ticket"
         footer={<>
           <Btn variant="primary" size="sm" onClick={submitTicket}>Submit Ticket</Btn>
           <Btn variant="secondary" size="sm" onClick={closeTicketForm}>Cancel</Btn>
         </>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormField label="Category">
-            <select value={newTicket.category}
-              onChange={e => { setNewTicket(f=>({...f, category:e.target.value})); setCategoryDetails({}); }}
-              className={inputCls}>
-              {TICKET_CATS.map(c=><option key={c}>{c}</option>)}
-            </select>
-          </FormField>
-          <FormField label="Priority">
-            <select value={newTicket.priority} onChange={e=>setNewTicket(f=>({...f, priority:e.target.value}))} className={inputCls}>
-              {["Low","Medium","High","Critical"].map(p=><option key={p}>{p}</option>)}
-            </select>
-          </FormField>
-        </div>
+        <FormField label="Category">
+          <select value={newTicket.category} onChange={e=>setNewTicket(f=>({...f, category:e.target.value}))} className={inputCls}>
+            {TICKET_CATS.map(c=><option key={c}>{c}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Priority">
+          <select value={newTicket.priority} onChange={e=>setNewTicket(f=>({...f, priority:e.target.value}))} className={inputCls}>
+            {["Low","Medium","High","Critical"].map(p=><option key={p}>{p}</option>)}
+          </select>
+        </FormField>
         <FormField label="Subject">
           <input value={newTicket.subject} onChange={e=>setNewTicket(f=>({...f, subject:e.target.value}))} placeholder="Brief subject..." className={inputCls}/>
         </FormField>
@@ -226,98 +195,13 @@ export default function ServiceDeskPage() {
           <textarea rows={3} value={newTicket.description} onChange={e=>setNewTicket(f=>({...f, description:e.target.value}))}
             placeholder="Describe your issue in detail..." className={cn(inputCls,"resize-none")}/>
         </FormField>
-
-        {newTicket.category === "ID Card" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormField label="ID Card Request Type">
-              <select value={categoryDetails.idCardRequestType || ""} onChange={e=>setDetail("idCardRequestType", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.idCardRequestTypes.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
+        <FormField label="Attachment (optional)">
+          <div className="flex items-center gap-2">
+            <Paperclip size={14} className="text-muted-foreground shrink-0"/>
+            <input type="file" onChange={e => setNewTicket(f => ({ ...f, attachmentName: e.target.files?.[0]?.name || "" }))} className={inputCls}/>
           </div>
-        )}
-
-        {newTicket.category === "Lunch" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormField label="Lunch Request Type">
-              <select value={categoryDetails.lunchRequestType || ""} onChange={e=>setDetail("lunchRequestType", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.lunchRequestTypes.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="From Date">
-              <input type="date" value={categoryDetails.lunchFromDate || ""} onChange={e=>setDetail("lunchFromDate", e.target.value)} className={inputCls}/>
-            </FormField>
-            <FormField label="To Date">
-              <input type="date" value={categoryDetails.lunchToDate || ""} onChange={e=>setDetail("lunchToDate", e.target.value)} className={inputCls}/>
-            </FormField>
-            <FormField label="Count">
-              <input type="number" min="1" value={categoryDetails.lunchCount || ""} onChange={e=>setDetail("lunchCount", e.target.value)} className={inputCls}/>
-            </FormField>
-          </div>
-        )}
-
-        {newTicket.category === "Repair and Maintenance" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormField label="Repair Item">
-              <select value={categoryDetails.repairItem || ""} onChange={e=>setDetail("repairItem", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.repairItems.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Count">
-              <input type="number" min="1" value={categoryDetails.repairCount || ""} onChange={e=>setDetail("repairCount", e.target.value)} className={inputCls}/>
-            </FormField>
-            <FormField label="Floor">
-              <select value={categoryDetails.repairFloor || ""} onChange={e=>setDetail("repairFloor", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.floors.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-          </div>
-        )}
-
-        {newTicket.category === "Stationary" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormField label="Stationary Category">
-              <select value={categoryDetails.stationaryCategory || ""}
-                onChange={e => setCategoryDetails(d => ({ ...d, stationaryCategory: e.target.value, stationaryItem: "" }))}
-                className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.stationaryCategories.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Stationary Item">
-              <select value={categoryDetails.stationaryItem || ""} onChange={e=>setDetail("stationaryItem", e.target.value)}
-                className={inputCls} disabled={!categoryDetails.stationaryCategory}>
-                <option value="">Select...</option>
-                {(catOptions.stationaryCategoryItems[categoryDetails.stationaryCategory] || []).map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Quantity">
-              <input type="number" min="1" value={categoryDetails.stationaryQuantity || ""} onChange={e=>setDetail("stationaryQuantity", e.target.value)} className={inputCls}/>
-            </FormField>
-            <FormField label="Unit">
-              <select value={categoryDetails.stationaryUnit || ""} onChange={e=>setDetail("stationaryUnit", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.stationaryUnits.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Department">
-              <select value={categoryDetails.stationaryDepartment || ""} onChange={e=>setDetail("stationaryDepartment", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {DEPTS.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Floor">
-              <select value={categoryDetails.stationaryFloor || ""} onChange={e=>setDetail("stationaryFloor", e.target.value)} className={inputCls}>
-                <option value="">Select...</option>
-                {catOptions.floors.map(o=><option key={o}>{o}</option>)}
-              </select>
-            </FormField>
-          </div>
-        )}
+          {newTicket.attachmentName && <span className="text-xs text-muted-foreground">Selected: {newTicket.attachmentName}</span>}
+        </FormField>
       </Modal>
 
       <Modal open={!!viewTicket} onClose={() => setViewTicket(null)} title="Ticket Details"
@@ -333,9 +217,7 @@ export default function ServiceDeskPage() {
               { label:"Status", value:viewTicket.status },
               { label:"Assigned To", value:viewTicket.assignedTo },
               { label:"Created Date", value:viewTicket.createdDate },
-              ...Object.entries(viewTicket.categoryDetails || {})
-                .filter(([, value]) => value)
-                .map(([key, value]) => ({ label: CATEGORY_FIELD_LABELS[key] || key, value })),
+              ...(viewTicket.attachmentName ? [{ label:"Attachment", value:viewTicket.attachmentName }] : []),
             ].map(f => (
               <div key={f.label} className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">{f.label}</span>
