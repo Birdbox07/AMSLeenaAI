@@ -9,12 +9,10 @@ import { BottomNav } from "./layout/BottomNav";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import EmployeesPage from "../features/employees/EmployeesPage";
 import AttendancePage from "../features/attendance/AttendancePage";
-import LocationPage from "../features/location/LocationPage";
 import LeavePage from "../features/leave/LeavePage";
 import DocumentsPage from "../features/documents/DocumentsPage";
 import ServiceDeskPage from "../features/servicedesk/ServiceDeskPage";
 import ServicesPage from "../features/services/ServicesPage";
-import ReportsPage from "../features/reports/ReportsPage";
 import SettingsPage from "../features/settings/SettingsPage";
 
 export default function App() {
@@ -69,14 +67,12 @@ export default function App() {
         />
         <main className="flex-1 overflow-auto p-4 sm:p-6 pb-20 md:pb-6">
           {module === "dashboard" && <DashboardPage onNavigate={setModule}/>}
-          {module === "employees" && <EmployeesPage onSelectEmployee={() => setModule("documents")}/>}
+          {module === "employees" && <EmployeesPage/>}
           {module === "attendance" && <AttendancePage/>}
-          {module === "location" && <LocationPage/>}
           {module === "leave" && <LeavePage/>}
           {module === "documents" && <DocumentsPage/>}
           {module === "servicedesk" && <ServiceDeskPage/>}
           {module === "services" && <ServicesPage/>}
-          {module === "reports" && <ReportsPage/>}
           {module === "settings" && <SettingsPage darkMode={darkMode} onDarkMode={toggleDark}/>}
         </main>
       </div>

@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Plus, Download, Pencil, RefreshCw } from "lucide-react";
+import { Plus, Download, Pencil, RefreshCw, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { DEPTS } from "../../shared/mock/constants";
 import { cn } from "../../shared/utils/cn";
+import { downloadTextFile } from "../../shared/utils/downloadTextFile";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
@@ -13,7 +14,7 @@ import { useHasRole } from "../../shared/access/role.store";
 import "./policies.css";
 
 const CATEGORIES = ["HR","IT","Finance","Operations","Compliance"];
-const emptyForm = { policyName: "", category: "", department: "", version: "v1.0", effectiveDate: "", status: "Active" };
+const emptyForm = { policyName: "", category: "", department: "", version: "v1.0", effectiveDate: "", status: "Active", fileName: "" };
 
 export default function PoliciesPage() {
   const { data: POLICIES } = usePoliciesQuery();
@@ -93,9 +94,15 @@ export default function PoliciesPage() {
         <DataTable
           columns={cols}
           data={filtered}
-          actions={() => (
+          hideExport
+          hidePrint
+          actions={(p) => (
             <>
-              <button onClick={() => toast.success("Downloading policy PDF")}
+              <button onClick={() => {
+                const fileName = p.fileName || `${p.policyName.replace(/\s+/g,"_")}.txt`;
+                downloadTextFile(fileName, `${p.policyName}\nCategory: ${p.category}\nDepartment: ${p.department}\nVersion: ${p.version}\nEffective Date: ${p.effectiveDate}\nStatus: ${p.status}`);
+                toast.success(`Downloading ${fileName}`);
+              }}
                 className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary" title="Download"><Download size={14}/></button>
               {isHrAdmin && (
                 <button onClick={() => openEdit(p)}
@@ -117,6 +124,17 @@ export default function PoliciesPage() {
           <input value={form.policyName} onChange={e=>setForm(f=>({...f, policyName:e.target.value}))} className={inputCls}/>
           {errors.policyName && <span className="text-xs text-destructive">{errors.policyName}</span>}
         </FormField>
+        {isHrAdmin && (
+          <FormField label="Policy Document (PDF/DOC, optional)">
+            <div className="flex items-center gap-2">
+              <UploadCloud size={14} className="text-muted-foreground shrink-0"/>
+              <input type="file" accept=".pdf,.doc,.docx"
+                onChange={e => setForm(f => ({ ...f, fileName: e.target.files?.[0]?.name || f.fileName }))}
+                className={inputCls}/>
+            </div>
+            {form.fileName && <span className="text-xs text-muted-foreground">Selected: {form.fileName}</span>}
+          </FormField>
+        )}
         <FormField label="Category">
           <select value={form.category} onChange={e=>setForm(f=>({...f, category:e.target.value}))} className={inputCls}>
             <option value="">Select category</option>

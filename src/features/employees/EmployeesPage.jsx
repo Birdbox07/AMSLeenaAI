@@ -21,7 +21,7 @@ import "./employees.css";
 
 const emptyEmpForm = { name:"", designation:"", department:DEPTS[0], email:"", mobile:"", manager:"", location:LOCS[0], status:"Active" };
 
-export default function EmployeesPage({ onSelectEmployee }) {
+export default function EmployeesPage() {
   const { data: employees } = useEmployeesQuery();
   const EMPLOYEE_STORE = useEmployeeMutations();
   const DOCUMENT_STORE = useDocumentMutations();
@@ -237,7 +237,7 @@ export default function EmployeesPage({ onSelectEmployee }) {
         initialSearch={initialSearch}
         actions={(row) => (
           <>
-            <button onClick={() => { setViewEmp(row); onSelectEmployee(row); }}
+            <button onClick={() => setViewEmp(row)}
               className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary" title="View">
               <Eye size={14}/>
             </button>

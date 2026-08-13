@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
-import { Users, Calendar, Plus, RefreshCw, Check, X, Eye, ClipboardList, Briefcase, Home } from "lucide-react";
+import { Users, Calendar, Plus, RefreshCw, Check, X, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
-import { LEAVE_TYPES } from "../../shared/mock/constants";
+import { LEAVE_TYPES, LEAVE_SESSIONS } from "../../shared/mock/constants";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
@@ -12,39 +12,16 @@ import { getLeaveBalance } from "./leave.mock";
 import { validateApplyLeaveForm } from "./leave.validators";
 import { useCurrentUser, useMyReportees } from "../employees/hooks/useEmployees";
 import { useHasRole } from "../../shared/access/role.store";
-import { useAttendance } from "../attendance/hooks/useAttendance";
-import CompOffTab from "./components/CompOffTab";
-import OnDutyTab from "./components/OnDutyTab";
-import WfhTab from "./components/WfhTab";
 import { CountUp } from "../../shared/components/CountUp";
 import "./leave.css";
 
-const SECTION_TABS = [
-  { id: "leave", label: "Leave Requests", icon: Calendar },
-  { id: "compoff", label: "Comp-Off Ledger", icon: ClipboardList },
-  { id: "onduty", label: "On-Duty Requests", icon: Briefcase },
-  { id: "wfh", label: "Work From Home", icon: Home },
-];
-
 export default function LeavePage() {
-  const [section, setSection] = useState("leave");
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-bold text-foreground">Leave Management</h2>
       </div>
-      <div className={cn("flex gap-1 flex-wrap bg-muted p-1 rounded-lg w-fit", "animate-fade-in-up")} style={{ animationDelay: "60ms" }}>
-        {SECTION_TABS.map(t => (
-          <button key={t.id} onClick={() => setSection(t.id)}
-            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer bg-transparent text-muted-foreground hover:text-foreground", section === t.id && "bg-card! shadow text-foreground!")}>
-            <t.icon size={14} /> {t.label}
-          </button>
-        ))}
-      </div>
-      {section === "leave" && <LeaveRequestsSection />}
-      {section === "compoff" && <CompOffTab />}
-      {section === "onduty" && <OnDutyTab />}
-      {section === "wfh" && <WfhTab />}
+      <LeaveRequestsSection />
     </div>
   );
 }
@@ -64,21 +41,16 @@ function LeaveRequestsSection() {
   const [balanceEmpId, setBalanceEmpId] = useState(CURRENT_USER.id);
   const [showApply, setShowApply] = useState(false);
   const [viewLeave, setViewLeave] = useState(null);
-  const [applyForm, setApplyForm] = useState({ leaveType: LEAVE_TYPES[0], fromDate:"", toDate:"", reason:"" });
+  const [applyForm, setApplyForm] = useState({ leaveType: LEAVE_TYPES[0], session: LEAVE_SESSIONS[2], fromDate:"", toDate:"", reason:"" });
 
   const hasManagerRole = useHasRole("Manager");
   const isManager = MY_REPORTEES.length > 0 && hasManagerRole;
   const [scope, setScope] = useState(isManager ? "team" : "mine");
   const reporteeIds = useMemo(() => new Set(MY_REPORTEES.map(e=>e.id)), [MY_REPORTEES]);
-  const today = new Date().toISOString().split("T")[0];
-  const ATTENDANCE = useAttendance();
 
-  const teamAttendanceToday = useMemo(() =>
-    MY_REPORTEES.map(emp => ({
-      emp,
-      record: ATTENDANCE.find(r => r.employeeId === emp.id && r.date === today) || null,
-    })),
-    [ATTENDANCE, today, MY_REPORTEES]
+  const reporteeBalances = useMemo(() =>
+    MY_REPORTEES.map(emp => ({ emp, balances: getLeaveBalance(emp.id, leaves) })),
+    [MY_REPORTEES, leaves]
   );
 
   const scoped = useMemo(() => scope === "team" && isManager
@@ -108,6 +80,7 @@ function LeaveRequestsSection() {
     { key:"leaveNumber", label:"Leave No." },
     { key:"employeeName", label:"Employee" },
     { key:"leaveType", label:"Leave Type" },
+    { key:"session", label:"Session", render: r => r.session || "Full Session" },
     { key:"fromDate", label:"From Date" },
     { key:"toDate", label:"To Date" },
     { key:"days", label:"Days", render: r => <span className="font-semibold">{r.days}</span> },
@@ -123,13 +96,14 @@ function LeaveRequestsSection() {
     const leave = {
       id: `LV${Date.now()}`, leaveNumber: `LVN${Date.now().toString().slice(-6)}`,
       employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, department: CURRENT_USER.department,
-      leaveType: applyForm.leaveType, fromDate: applyForm.fromDate, toDate: applyForm.toDate, days,
+      leaveType: applyForm.leaveType, session: applyForm.session,
+      fromDate: applyForm.fromDate, toDate: applyForm.toDate, days,
       status: "Pending", approver: CURRENT_USER.manager,
     };
     LEAVE_STORE.add(leave);
     toast.success(`Leave request ${leave.leaveNumber} submitted`);
     setShowApply(false);
-    setApplyForm({ leaveType: LEAVE_TYPES[0], fromDate:"", toDate:"", reason:"" });
+    setApplyForm({ leaveType: LEAVE_TYPES[0], session: LEAVE_SESSIONS[2], fromDate:"", toDate:"", reason:"" });
   };
 
   return (
@@ -152,7 +126,7 @@ function LeaveRequestsSection() {
         <div className="flex gap-2 ml-auto">
           {isManager && (
             <Btn variant="secondary" size="sm" onClick={() => setShowTeamModal(true)} className="hover-lift">
-              <Users size={14}/> My Reportees' Attendance
+              <Users size={14}/> My Reportees' Leave Balance
             </Btn>
           )}
           <Btn variant="secondary" size="sm" onClick={() => { setBalanceEmpId(CURRENT_USER.id); setShowBalance(true); }} className="hover-lift">
@@ -221,11 +195,11 @@ function LeaveRequestsSection() {
       />
       </div>
 
-      <Modal open={showTeamModal} onClose={() => setShowTeamModal(false)} title="My Reportees – Attendance Today" maxWidth="max-w-lg"
+      <Modal open={showTeamModal} onClose={() => setShowTeamModal(false)} title="My Reportees – Leave Balance" maxWidth="max-w-lg"
         footer={<Btn variant="secondary" size="sm" onClick={() => setShowTeamModal(false)}>Close</Btn>}>
         <div className="-m-2 divide-y divide-border">
-          {teamAttendanceToday.map(({ emp, record }) => (
-            <div key={emp.id} className="py-2.5 px-2 flex items-center justify-between gap-3">
+          {reporteeBalances.map(({ emp, balances }) => (
+            <div key={emp.id} className="py-2.5 px-2 flex flex-col gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-[0.625rem] font-bold shrink-0">
                   {emp.name.split(" ").map(n=>n[0]).join("").slice(0,2)}
@@ -235,10 +209,16 @@ function LeaveRequestsSection() {
                   <p className="text-[0.6875rem] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">{emp.designation} · {emp.department}</p>
                 </div>
               </div>
-              <StatusBadge status={record?.status || "Absent"}/>
+              <div className="flex flex-wrap gap-1.5 pl-10">
+                {balances.map(b => (
+                  <span key={b.type} className="text-[11px] py-1 px-2 rounded-md bg-secondary text-secondary-foreground">
+                    {b.type}: <span className="font-semibold text-primary">{b.balance}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           ))}
-          {teamAttendanceToday.length === 0 && (
+          {reporteeBalances.length === 0 && (
             <p className="text-sm text-muted-foreground py-4 text-center">No reportees found.</p>
           )}
         </div>
@@ -279,6 +259,11 @@ function LeaveRequestsSection() {
             {LEAVE_TYPES.map(t=><option key={t}>{t}</option>)}
           </select>
         </FormField>
+        <FormField label="Session">
+          <select value={applyForm.session} onChange={e=>setApplyForm(f=>({...f, session:e.target.value}))} className={inputCls}>
+            {LEAVE_SESSIONS.map(s=><option key={s}>{s}</option>)}
+          </select>
+        </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="From Date">
             <input type="date" value={applyForm.fromDate} onChange={e=>setApplyForm(f=>({...f, fromDate:e.target.value}))} className={inputCls}/>
@@ -301,6 +286,7 @@ function LeaveRequestsSection() {
               { label:"Leave No.", value:viewLeave.leaveNumber },
               { label:"Employee", value:viewLeave.employeeName },
               { label:"Leave Type", value:viewLeave.leaveType },
+              { label:"Session", value:viewLeave.session || "Full Session" },
               { label:"From Date", value:viewLeave.fromDate },
               { label:"To Date", value:viewLeave.toDate },
               { label:"Days", value:viewLeave.days },

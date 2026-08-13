@@ -1,9 +1,7 @@
 import { seed } from "../../shared/mock/constants";
 import { EMPLOYEES } from "../employees/employees.mock";
 
-// Allowed attendance status values: Present, Absent, Late, Leave, Holiday,
-// and "WFH" (set only via the WFH request approval flow in
-// leave.wfh.store.js — never generated here).
+// Allowed attendance status values: Present, Absent, Late, Leave, Holiday.
 
 export function genAttendance() {
   const records = [];
