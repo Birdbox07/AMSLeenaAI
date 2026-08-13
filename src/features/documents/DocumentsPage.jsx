@@ -1,16 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
-import { Download, Eye, RefreshCw, FolderOpen, ReceiptText } from "lucide-react";
+import { Download, FolderOpen, ReceiptText, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { downloadTextFile } from "../../shared/utils/downloadTextFile";
-import { Modal } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
-import { DataTable } from "../../shared/components/DataTable";
+import { FormField, inputCls } from "../../shared/components/Modal";
 import { useDocumentsQuery } from "./hooks/useDocumentsQuery";
 import { DOC_TYPES } from "./documents.mock";
 import { useCurrentUser } from "../employees/hooks/useEmployees";
 import { useDocAccess, isDocTypeAllowed } from "./hooks/useDocAccess";
-import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import IncomeTaxDeclarationTab from "./components/IncomeTaxDeclarationTab";
 import "./documents.css";
 
@@ -25,29 +23,39 @@ export default function DocumentsPage() {
   const access = useDocAccess(CURRENT_USER.id);
   const visibleDocTypes = useMemo(() => DOC_TYPES.filter(t => isDocTypeAllowed(access, t)), [access]);
 
-  const [dateFilter, setDateFilter] = useState("");
-  const [docTypeFilter, setDocTypeFilter] = useState("");
-  const [viewDoc, setViewDoc] = useState(null);
+  const [docType, setDocType] = useState("");
+  const [date, setDate] = useState("");
   const [docTab, setDocTab] = useState("documents");
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [pendingDoc, setPendingDoc] = useState(null);
 
-  const [initialSearch, setInitialSearch] = useState("");
+  const startDownload = () => {
+    if (!docType || !date) { toast.error("Select a Document Type and Date first"); return; }
+    const doc = documents.find(d => d.docType === docType && d.uploadDate === date);
+    if (!doc) { toast.error("No document found for the selected type and date"); return; }
+    setPendingDoc(doc);
+    setDownloading(true);
+    setProgress(0);
+  };
+
   useEffect(() => {
-    const q = useGlobalSearchStore.getState().consumePending("documents");
-    if (q) setInitialSearch(q);
-  }, []);
-
-  const filteredDocs = useMemo(() =>
-    documents.filter(d =>
-      (!dateFilter || d.uploadDate === dateFilter) &&
-      (!docTypeFilter || d.docType === docTypeFilter)
-    ),
-    [documents, dateFilter, docTypeFilter]
-  );
-
-  const cols = [
-    { key:"docType", label:"Document Type" },
-    { key:"uploadDate", label:"Date" },
-  ];
+    if (!downloading) return;
+    const interval = setInterval(() => {
+      setProgress(p => {
+        const next = Math.min(100, p + Math.floor(Math.random() * 18) + 8);
+        if (next >= 100) {
+          clearInterval(interval);
+          downloadTextFile(pendingDoc.fileName, `${pendingDoc.docType} for ${pendingDoc.employeeName}\nUploaded: ${pendingDoc.uploadDate}`);
+          toast.success(`Downloaded ${pendingDoc.fileName}`);
+          setDownloading(false);
+        }
+        return next;
+      });
+    }, 200);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [downloading]);
 
   return (
     <div className="documents-page flex flex-col gap-4">
@@ -70,80 +78,44 @@ export default function DocumentsPage() {
       {docTab === "taxdeclaration" && <IncomeTaxDeclarationTab />}
 
       {docTab === "documents" && (
-      <>
-      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Document Type</label>
-          <select
-            value={docTypeFilter}
-            onChange={e => setDocTypeFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[150px]"
-          >
-            <option value="">All Types</option>
-            {visibleDocTypes.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Date</label>
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-        {(dateFilter || docTypeFilter) && (
-          <Btn variant="ghost" size="sm" onClick={() => { setDateFilter(""); setDocTypeFilter(""); }}>
-            <RefreshCw size={13}/> Reset
-          </Btn>
-        )}
-      </div>
-
-      <div className="animate-fade-in-up" style={{ animationDelay: "360ms" }}>
-      <DataTable
-        columns={cols}
-        data={filteredDocs}
-        initialSearch={initialSearch}
-        actions={(row) => {
-          const d = row;
-          return (
-            <>
-              <button onClick={() => { downloadTextFile(d.fileName, `${d.docType} for ${d.employeeName}\nUploaded: ${d.uploadDate}`); toast.success(`Downloading ${d.fileName}`); }}
-                className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-primary" title="Download">
-                <Download size={14}/>
-              </button>
-              <button onClick={() => setViewDoc(d)}
-                className="p-1.5 rounded-md transition-colors bg-transparent border-none cursor-pointer hover:bg-secondary text-muted-foreground" title="View">
-                <Eye size={14}/>
-              </button>
-            </>
-          );
-        }}
-      />
-      </div>
-      </>
-      )}
-
-      <Modal open={!!viewDoc} onClose={() => setViewDoc(null)} title="Document Details"
-        footer={<Btn variant="secondary" size="sm" onClick={() => setViewDoc(null)}>Close</Btn>}>
-        {viewDoc && (
-          <div className="flex flex-col gap-2.5 text-sm">
-            {[
-              { label:"Employee", value:viewDoc.employeeName },
-              { label:"Document Type", value:viewDoc.docType },
-              { label:"File Name", value:viewDoc.fileName },
-              { label:"Upload Date", value:viewDoc.uploadDate },
-              { label:"Size", value:viewDoc.size },
-              { label:"Status", value:viewDoc.status },
-            ].map(f => (
-              <div key={f.label} className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">{f.label}</span>
-                <span className="font-medium text-foreground text-right">{f.value}</span>
-              </div>
-            ))}
+        <div className={cn("bg-card rounded-lg border border-border shadow-sm p-6 max-w-md animate-fade-in-up", "hover-lift")} style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-9 h-9 rounded-full bg-secondary text-primary flex items-center justify-center shrink-0">
+              <FileDown size={16}/>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Download a Document</h3>
+              <p className="text-xs text-muted-foreground">Select the document type and date to download it.</p>
+            </div>
           </div>
-        )}
-      </Modal>
+
+          <FormField label="Document Type">
+            <select value={docType} onChange={e => setDocType(e.target.value)} className={inputCls} disabled={downloading}>
+              <option value="">Select type...</option>
+              {visibleDocTypes.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </FormField>
+
+          <FormField label="Date">
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} disabled={downloading}/>
+          </FormField>
+
+          <Btn variant="primary" size="sm" onClick={startDownload} disabled={downloading} className="w-full justify-center mt-2">
+            <Download size={14}/> {downloading ? "Downloading..." : "Download Document"}
+          </Btn>
+
+          {downloading && (
+            <div className="flex flex-col gap-1.5 mt-4">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div className="bg-primary h-2 transition-all duration-200" style={{ width: `${progress}%` }}/>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Downloading {pendingDoc?.fileName}... {progress}%
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

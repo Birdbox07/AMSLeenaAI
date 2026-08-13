@@ -28,12 +28,12 @@ function dayEvent(record) {
 const WEEKDAY_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 const CELL_TINT = {
-  Present: "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800/40",
-  Late: "bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-800/40",
-  Leave: "bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800/40",
-  Holiday: "bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-800/40",
-  "On Duty": "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-800/40",
-  "Forgot to Swipe": "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800/40",
+  Present: "bg-green-200 border-green-400 dark:bg-green-800/50 dark:border-green-600",
+  Late: "bg-orange-200 border-orange-400 dark:bg-orange-800/50 dark:border-orange-600",
+  Leave: "bg-blue-200 border-blue-400 dark:bg-blue-800/50 dark:border-blue-600",
+  Holiday: "bg-purple-200 border-purple-400 dark:bg-purple-800/50 dark:border-purple-600",
+  "On Duty": "bg-indigo-200 border-indigo-400 dark:bg-indigo-800/50 dark:border-indigo-600",
+  "Forgot to Swipe": "bg-red-200 border-red-400 dark:bg-red-800/50 dark:border-red-600",
 };
 
 function getMonthWeeks(year, month) {
@@ -82,11 +82,11 @@ function AttendanceCalendar({ records, fromDate, toDate }) {
                 <div key={w} className="text-center text-[11px] font-semibold text-muted-foreground py-1">{w}</div>
               ))}
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               {getMonthWeeks(year, month).map((week, wi) => (
-                <div key={wi} className="grid grid-cols-7 gap-1.5">
+                <div key={wi} className="grid grid-cols-7 gap-1">
                   {week.map((date, di) => {
-                    if (!date) return <div key={di} className="min-h-[86px] rounded-md"/>;
+                    if (!date) return <div key={di} className="min-h-[52px] rounded-md"/>;
                     const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
                     const inRange = dateStr >= fromDate && dateStr <= toDate;
                     const record = recordsByDate.get(dateStr);
@@ -97,16 +97,16 @@ function AttendanceCalendar({ records, fromDate, toDate }) {
 
                     return (
                       <div key={di} className={cn(
-                        "min-h-[86px] rounded-md border p-1.5 flex flex-col gap-1 transition-colors",
+                        "min-h-[52px] rounded-md border p-1 flex flex-col gap-0.5 transition-colors",
                         ev ? (CELL_TINT[ev.status] || "border-border") : "border-border/50",
                         !inRange && "opacity-40"
                       )}>
-                        <span className="text-[11px] font-semibold text-foreground">{date.getDate()}</span>
+                        <span className="text-[10px] font-bold text-foreground">{date.getDate()}</span>
                         {ev && (
                           <>
-                            <span className="text-[10px] font-semibold leading-tight text-foreground truncate" title={ev.label}>{ev.label}</span>
+                            <span className="text-[9px] font-bold leading-tight text-foreground truncate" title={ev.label}>{ev.label}</span>
                             {record && (record.checkIn !== "-" || record.checkOut !== "-") && (
-                              <span className="text-[9.5px] text-muted-foreground leading-tight">{record.checkIn} – {record.checkOut}</span>
+                              <span className="text-[8px] text-foreground/70 leading-tight truncate">{record.checkIn}–{record.checkOut}</span>
                             )}
                           </>
                         )}
@@ -117,12 +117,10 @@ function AttendanceCalendar({ records, fromDate, toDate }) {
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border">
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border">
+            <span className="text-xs font-bold text-foreground mr-1">Legend:</span>
             {Object.keys(CELL_TINT).map(status => (
-              <span key={status} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className={cn("w-2.5 h-2.5 rounded-sm border shrink-0", CELL_TINT[status])}/>
-                {status}
-              </span>
+              <StatusBadge key={status} status={status}/>
             ))}
           </div>
         </div>

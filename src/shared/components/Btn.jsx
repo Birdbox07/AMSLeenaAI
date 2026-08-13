@@ -13,12 +13,14 @@ const sizeClasses = {
   xs: "py-1 px-2 text-xs",
 };
 
-export function Btn({ children, variant = "primary", size = "sm", onClick, className = "" }) {
+export function Btn({ children, variant = "primary", size = "sm", onClick, className = "", disabled = false }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "inline-flex items-center gap-1.5 font-medium rounded-lg transition-colors border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring",
+        "disabled:opacity-50 disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],
         className
