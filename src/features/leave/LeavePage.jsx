@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Users, Calendar, Plus, RefreshCw, Check, X, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
-import { LEAVE_TYPES, LEAVE_SESSIONS } from "../../shared/mock/constants";
+import { LEAVE_TYPES, LEAVE_SESSIONS, FORGOT_TO_SWIPE_REASONS } from "../../shared/mock/constants";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
@@ -14,6 +14,24 @@ import { useCurrentUser, useMyReportees } from "../employees/hooks/useEmployees"
 import { useHasRole } from "../../shared/access/role.store";
 import { CountUp } from "../../shared/components/CountUp";
 import "./leave.css";
+
+function datesInRange(start, end) {
+  if (!start || !end || end < start) return [];
+  const dates = [];
+  const d = new Date(`${start}T00:00:00`);
+  const last = new Date(`${end}T00:00:00`);
+  while (d <= last) {
+    dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+const emptyApplyForm = {
+  leaveType: LEAVE_TYPES[0],
+  startDate: "", endDate: "", reason: "",
+  singleDate: "", session: LEAVE_SESSIONS[2], forgotReason: "",
+};
 
 export default function LeavePage() {
   return (
@@ -40,7 +58,20 @@ function LeaveRequestsSection() {
   const [showBalance, setShowBalance] = useState(false);
   const [showApply, setShowApply] = useState(false);
   const [viewLeave, setViewLeave] = useState(null);
-  const [applyForm, setApplyForm] = useState({ leaveType: LEAVE_TYPES[0], session: LEAVE_SESSIONS[2], fromDate:"", toDate:"", reason:"" });
+  const [applyForm, setApplyForm] = useState(emptyApplyForm);
+  const [dateSessions, setDateSessions] = useState({});
+
+  const isRangeType = applyForm.leaveType !== "Forgot to Swipe";
+  const rangeDates = useMemo(() => isRangeType ? datesInRange(applyForm.startDate, applyForm.endDate) : [], [isRangeType, applyForm.startDate, applyForm.endDate]);
+
+  useEffect(() => {
+    if (!isRangeType) return;
+    setDateSessions(prev => {
+      const next = {};
+      rangeDates.forEach(d => { next[d] = prev[d] || LEAVE_SESSIONS[2]; });
+      return next;
+    });
+  }, [rangeDates, isRangeType]);
 
   const hasManagerRole = useHasRole("Manager");
   const isManager = MY_REPORTEES.length > 0 && hasManagerRole;
@@ -73,11 +104,20 @@ function LeaveRequestsSection() {
 
   const myBalance = useMemo(() => getLeaveBalance(CURRENT_USER.id, leaves), [CURRENT_USER, leaves]);
 
+  const sessionSummary = (r) => {
+    if (r.session) return r.session;
+    if (r.dateSessions) {
+      const vals = Object.values(r.dateSessions);
+      return vals.length > 1 ? `${vals.length} dates` : (vals[0] || "Full Session");
+    }
+    return "Full Session";
+  };
+
   const cols = [
     { key:"leaveNumber", label:"Leave No." },
     { key:"employeeName", label:"Employee" },
     { key:"leaveType", label:"Leave Type" },
-    { key:"session", label:"Session", render: r => r.session || "Full Session" },
+    { key:"session", label:"Session", render: sessionSummary },
     { key:"fromDate", label:"From Date" },
     { key:"toDate", label:"To Date" },
     { key:"days", label:"Days", render: r => <span className="font-semibold">{r.days}</span> },
@@ -85,22 +125,39 @@ function LeaveRequestsSection() {
     { key:"status", label:"Status", render: r => <StatusBadge status={r.status}/> },
   ];
 
+  const resetApplyForm = () => {
+    setApplyForm(emptyApplyForm);
+    setDateSessions({});
+  };
+
   const submitApply = () => {
     const errors = validateApplyLeaveForm(applyForm);
     if (Object.keys(errors).length) { toast.error(Object.values(errors)[0]); return; }
-    const from = new Date(applyForm.fromDate), to = new Date(applyForm.toDate);
-    const days = Math.max(1, Math.round((to.getTime()-from.getTime())/86400000)+1);
-    const leave = {
-      id: `LV${Date.now()}`, leaveNumber: `LVN${Date.now().toString().slice(-6)}`,
-      employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, department: CURRENT_USER.department,
-      leaveType: applyForm.leaveType, session: applyForm.session,
-      fromDate: applyForm.fromDate, toDate: applyForm.toDate, days,
-      status: "Pending", approver: CURRENT_USER.manager,
-    };
+
+    let leave;
+    if (applyForm.leaveType === "Forgot to Swipe") {
+      leave = {
+        id: `LV${Date.now()}`, leaveNumber: `LVN${Date.now().toString().slice(-6)}`,
+        employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, department: CURRENT_USER.department,
+        leaveType: applyForm.leaveType, session: applyForm.session,
+        fromDate: applyForm.singleDate, toDate: applyForm.singleDate, days: 1,
+        reason: applyForm.forgotReason,
+        status: "Pending", approver: CURRENT_USER.manager,
+      };
+    } else {
+      leave = {
+        id: `LV${Date.now()}`, leaveNumber: `LVN${Date.now().toString().slice(-6)}`,
+        employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, department: CURRENT_USER.department,
+        leaveType: applyForm.leaveType, dateSessions,
+        fromDate: applyForm.startDate, toDate: applyForm.endDate, days: rangeDates.length,
+        reason: applyForm.reason,
+        status: "Pending", approver: CURRENT_USER.manager,
+      };
+    }
     LEAVE_STORE.add(leave);
     toast.success(`Leave request ${leave.leaveNumber} submitted`);
     setShowApply(false);
-    setApplyForm({ leaveType: LEAVE_TYPES[0], session: LEAVE_SESSIONS[2], fromDate:"", toDate:"", reason:"" });
+    resetApplyForm();
   };
 
   return (
@@ -238,33 +295,72 @@ function LeaveRequestsSection() {
         </div>
       </Modal>
 
-      <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply Leave"
+      <Modal open={showApply} onClose={() => { setShowApply(false); resetApplyForm(); }} title="Apply Leave" maxWidth="max-w-lg"
         footer={<>
           <Btn variant="primary" size="sm" onClick={submitApply}>Submit</Btn>
-          <Btn variant="secondary" size="sm" onClick={() => setShowApply(false)}>Cancel</Btn>
+          <Btn variant="secondary" size="sm" onClick={() => { setShowApply(false); resetApplyForm(); }}>Cancel</Btn>
         </>}>
         <FormField label="Leave Type">
-          <select value={applyForm.leaveType} onChange={e=>setApplyForm(f=>({...f, leaveType:e.target.value}))} className={inputCls}>
+          <select value={applyForm.leaveType}
+            onChange={e => { setApplyForm(f=>({...f, leaveType:e.target.value})); setDateSessions({}); }}
+            className={inputCls}>
             {LEAVE_TYPES.map(t=><option key={t}>{t}</option>)}
           </select>
         </FormField>
-        <FormField label="Session">
-          <select value={applyForm.session} onChange={e=>setApplyForm(f=>({...f, session:e.target.value}))} className={inputCls}>
-            {LEAVE_SESSIONS.map(s=><option key={s}>{s}</option>)}
-          </select>
-        </FormField>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="From Date">
-            <input type="date" value={applyForm.fromDate} onChange={e=>setApplyForm(f=>({...f, fromDate:e.target.value}))} className={inputCls}/>
-          </FormField>
-          <FormField label="To Date">
-            <input type="date" value={applyForm.toDate} onChange={e=>setApplyForm(f=>({...f, toDate:e.target.value}))} className={inputCls}/>
-          </FormField>
-        </div>
-        <FormField label="Reason">
-          <textarea rows={3} value={applyForm.reason} onChange={e=>setApplyForm(f=>({...f, reason:e.target.value}))}
-            placeholder="Reason for leave..." className={cn(inputCls,"resize-none")}/>
-        </FormField>
+
+        {applyForm.leaveType === "Forgot to Swipe" ? (
+          <>
+            <FormField label="Date">
+              <input type="date" value={applyForm.singleDate} onChange={e=>setApplyForm(f=>({...f, singleDate:e.target.value}))} className={inputCls}/>
+            </FormField>
+            {applyForm.singleDate && (
+              <>
+                <FormField label="Session">
+                  <select value={applyForm.session} onChange={e=>setApplyForm(f=>({...f, session:e.target.value}))} className={inputCls}>
+                    {LEAVE_SESSIONS.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Reason">
+                  <select value={applyForm.forgotReason} onChange={e=>setApplyForm(f=>({...f, forgotReason:e.target.value}))} className={inputCls}>
+                    <option value="">Select a reason...</option>
+                    {FORGOT_TO_SWIPE_REASONS.map(r=><option key={r}>{r}</option>)}
+                  </select>
+                </FormField>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Start Date">
+                <input type="date" value={applyForm.startDate} onChange={e=>setApplyForm(f=>({...f, startDate:e.target.value}))} className={inputCls}/>
+              </FormField>
+              <FormField label="End Date">
+                <input type="date" value={applyForm.endDate} onChange={e=>setApplyForm(f=>({...f, endDate:e.target.value}))} className={inputCls}/>
+              </FormField>
+            </div>
+            {rangeDates.length > 0 && (
+              <FormField label={`Session per Date (${rangeDates.length} day${rangeDates.length>1?"s":""})`}>
+                <div className="-mx-1 max-h-[200px] overflow-y-auto flex flex-col gap-1.5 pr-1">
+                  {rangeDates.map(d => (
+                    <div key={d} className="flex items-center justify-between gap-2 py-1 px-2 rounded-md bg-secondary/40">
+                      <span className="text-sm text-foreground">{d}</span>
+                      <select value={dateSessions[d] || LEAVE_SESSIONS[2]}
+                        onChange={e => setDateSessions(prev => ({ ...prev, [d]: e.target.value }))}
+                        className="border border-border rounded-md py-1 px-2 text-xs bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
+                        {LEAVE_SESSIONS.map(s=><option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </FormField>
+            )}
+            <FormField label="Reason (optional)">
+              <textarea rows={3} value={applyForm.reason} onChange={e=>setApplyForm(f=>({...f, reason:e.target.value}))}
+                placeholder="Reason for leave..." className={cn(inputCls,"resize-none")}/>
+            </FormField>
+          </>
+        )}
       </Modal>
 
       <Modal open={!!viewLeave} onClose={() => setViewLeave(null)} title="Leave Request Details"
@@ -275,18 +371,37 @@ function LeaveRequestsSection() {
               { label:"Leave No.", value:viewLeave.leaveNumber },
               { label:"Employee", value:viewLeave.employeeName },
               { label:"Leave Type", value:viewLeave.leaveType },
-              { label:"Session", value:viewLeave.session || "Full Session" },
               { label:"From Date", value:viewLeave.fromDate },
               { label:"To Date", value:viewLeave.toDate },
               { label:"Days", value:viewLeave.days },
               { label:"Approver", value:viewLeave.approver },
               { label:"Status", value:viewLeave.status },
+              ...(viewLeave.reason ? [{ label:"Reason", value:viewLeave.reason }] : []),
             ].map(f => (
               <div key={f.label} className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">{f.label}</span>
                 <span className="font-medium text-foreground text-right">{f.value}</span>
               </div>
             ))}
+            {viewLeave.dateSessions && Object.keys(viewLeave.dateSessions).length > 0 && (
+              <div className="pt-2 mt-1 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Session per Date</p>
+                <div className="flex flex-col gap-1">
+                  {Object.entries(viewLeave.dateSessions).map(([d, s]) => (
+                    <div key={d} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-muted-foreground">{d}</span>
+                      <span className="font-medium text-foreground">{s}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {viewLeave.session && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Session</span>
+                <span className="font-medium text-foreground text-right">{viewLeave.session}</span>
+              </div>
+            )}
           </div>
         )}
       </Modal>

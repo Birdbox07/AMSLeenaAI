@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
-  Menu, X, Home, ChevronRight, Search, Sun, Moon, MessageSquare, Bell,
+  Menu, X, Home, ChevronRight, Search, Sun, Moon, Bell,
   ChevronDown, User, Settings, HelpCircle, LogOut, CheckCircle, Shield, Headphones, Clock, GraduationCap,
   Users, Headset, FileText,
 } from "lucide-react";
@@ -155,11 +155,6 @@ export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, o
       <div className="ml-auto flex items-center gap-1">
         <button onClick={onDarkMode} className="p-2 rounded-full transition-colors relative bg-transparent border-0 cursor-pointer hover:bg-muted" title="Toggle theme">
           {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
-        </button>
-
-        <button className="p-2 rounded-full transition-colors relative bg-transparent border-0 cursor-pointer hover:bg-muted" title="Messages">
-          <MessageSquare size={16}/>
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full"/>
         </button>
 
         <div className="relative">

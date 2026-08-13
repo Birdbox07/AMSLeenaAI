@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Eye, Pencil, Trash2, Plus, RefreshCw, Layers, X, CheckCircle, User, Building2, Mail, Phone, MapPin, Calendar, Users, UsersRound, UploadCloud } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, RefreshCw, Layers, X, CheckCircle, User, Building2, Mail, Phone, MapPin, Calendar, Users, UsersRound, UploadCloud, IdCard, Network } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { DEPTS, LOCS } from "../../shared/mock/constants";
@@ -17,6 +17,7 @@ import { useDocumentMutations } from "../documents/hooks/useDocumentsQuery";
 import { FamilyDetailsModal } from "./components/FamilyDetailsModal";
 import { BulkImportEmployeesModal } from "./components/BulkImportEmployeesModal";
 import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
+import OrgPage from "../org/OrgPage";
 import "./employees.css";
 
 const emptyEmpForm = { name:"", designation:"", department:DEPTS[0], email:"", mobile:"", manager:"", location:LOCS[0], status:"Active" };
@@ -28,8 +29,8 @@ export default function EmployeesPage() {
   const CURRENT_USER = useCurrentUser();
   const isHrAdmin = useHasRole("HR Admin");
 
+  const [view, setView] = useState("details");
   const [deptFilter, setDeptFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [locFilter, setLocFilter] = useState("");
   const [viewEmp, setViewEmp] = useState(null);
   const [editEmp, setEditEmp] = useState(null);
@@ -116,11 +117,12 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bulkUploading]);
 
-  const filtered = useMemo(() => employees.filter(e =>
-    (!deptFilter || e.department === deptFilter) &&
-    (!statusFilter || e.status === statusFilter) &&
-    (!locFilter || e.location === locFilter)
-  ), [employees, deptFilter, statusFilter, locFilter]);
+  const visibleEmployees = useMemo(() => isHrAdmin ? employees : employees.filter(e => e.id === CURRENT_USER.id), [employees, isHrAdmin, CURRENT_USER]);
+
+  const filtered = useMemo(() => visibleEmployees.filter(e =>
+    (!isHrAdmin || !deptFilter || e.department === deptFilter) &&
+    (!isHrAdmin || !locFilter || e.location === locFilter)
+  ), [visibleEmployees, isHrAdmin, deptFilter, locFilter]);
 
   const openAdd = () => { setForm(emptyEmpForm); setShowAdd(true); };
   const openEdit = (emp) => {
@@ -183,52 +185,60 @@ export default function EmployeesPage() {
     <div className="employees-page flex flex-col gap-4">
       <div className={cn("flex flex-wrap gap-3 items-center", "animate-fade-in-up")} style={{ animationDelay: "0ms" }}>
         <h2 className="text-lg font-bold text-foreground mr-auto">Employee Directory</h2>
-        {isHrAdmin && (
+        <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
+          <button onClick={() => setView("details")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors cursor-pointer border-none",
+              view==="details" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <IdCard size={13}/> Employee Details
+          </button>
+          <button onClick={() => setView("orgchart")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors cursor-pointer border-none",
+              view==="orgchart" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <Network size={13}/> Organization Chart
+          </button>
+        </div>
+        {view === "details" && isHrAdmin && (
           <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>
             <Layers size={14}/> Bulk Upload Documents
           </Btn>
         )}
-        {isHrAdmin && (
+        {view === "details" && isHrAdmin && (
           <Btn variant="secondary" size="sm" onClick={() => setShowBulkImport(true)}>
             <UploadCloud size={14}/> Bulk Import Employees
           </Btn>
         )}
-        {isHrAdmin && (
+        {view === "details" && isHrAdmin && (
           <Btn variant="primary" size="sm" onClick={openAdd}>
             <Plus size={14}/> Add Employee
           </Btn>
         )}
       </div>
 
-      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "hover-lift", "animate-fade-in-up")} style={{ animationDelay: "60ms" }}>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Department</label>
-          <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[150px]">
-            <option value="">All Departments</option>
-            {DEPTS.map(d=><option key={d} value={d}>{d}</option>)}
-          </select>
+      {view === "orgchart" ? <OrgPage/> : <>
+
+      {isHrAdmin && (
+        <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "hover-lift", "animate-fade-in-up")} style={{ animationDelay: "60ms" }}>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-muted-foreground">Department</label>
+            <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
+              className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[150px]">
+              <option value="">All Departments</option>
+              {DEPTS.map(d=><option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-muted-foreground">Location</label>
+            <select value={locFilter} onChange={e=>setLocFilter(e.target.value)}
+              className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]">
+              <option value="">All Locations</option>
+              {LOCS.map(l=><option key={l}>{l}</option>)}
+            </select>
+          </div>
+          <Btn variant="ghost" size="sm" onClick={() => { setDeptFilter(""); setLocFilter(""); }}>
+            <RefreshCw size={13}/> Reset
+          </Btn>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Status</label>
-          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]">
-            <option value="">All Status</option>
-            {["Active","Inactive","On Leave"].map(s=><option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Location</label>
-          <select value={locFilter} onChange={e=>setLocFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]">
-            <option value="">All Locations</option>
-            {LOCS.map(l=><option key={l}>{l}</option>)}
-          </select>
-        </div>
-        <Btn variant="ghost" size="sm" onClick={() => { setDeptFilter(""); setStatusFilter(""); setLocFilter(""); }}>
-          <RefreshCw size={13}/> Reset
-        </Btn>
-      </div>
+      )}
 
       <div className={cn("animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
       <DataTable
@@ -308,6 +318,7 @@ export default function EmployeesPage() {
           </div>
         </div>
       )}
+      </>}
 
       <Modal open={showAdd || !!editEmp} onClose={() => { setShowAdd(false); setEditEmp(null); }}
         title={editEmp ? "Edit Employee" : "Add Employee"}

@@ -35,8 +35,7 @@ LEAVES.forEach(l => {
 });
 
 export const LEAVE_ALLOCATION = {
-  "Casual Leave": 12, "Sick Leave": 12, "Earned Leave": 15,
-  "Maternity Leave": 180, "Paternity Leave": 15, "Compensatory Leave": 5,
+  "Casual Leave": 12, "Privilege Leave": 15,
 };
 
 export function getLeaveBalance(employeeId, leaves) {
