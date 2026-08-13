@@ -4,7 +4,7 @@ import { EMPLOYEES } from "../employees/employees.mock";
 export const TICKET_CATS = [
   "Admin","Login Issue","Medical Insurance","Payroll/Salary","Provident Fund/PF","Relocation",
   "Access Request/ID Card","Visitor Lunch","Stationery","Repair and Maintenance","Onboarding","IJP",
-  "Learning & Development","Statutory Compliance","Talent Management","Performance Management",
+  "Learning & Development","Statutory Compliance","Talent Management","Team Management","Performance Management",
   "Prestige Stars","Others",
 ];
 
@@ -12,23 +12,31 @@ export const TICKET_CATS = [
 // "Call Register" screens) instead of the generic Category + Sub Category flow.
 export const BESPOKE_CATS = ["Access Request/ID Card", "Visitor Lunch", "Stationery", "Repair and Maintenance"];
 
-// Sub Category options for every non-bespoke category (ported from the LEENA
-// AI ticketing form). Every list ends in "Others" as a catch-all.
+// Categories that have no meaningful sub-category breakdown — the Sub
+// Category field is hidden/disabled entirely for these two.
+export const NO_SUBCATEGORY_CATS = ["Others", "Team Management"];
+
+// Category -> Sub Category cascading dropdown data, ported verbatim from the
+// LEENA AI ticketing form. "Leave" is included for completeness even though
+// it isn't one of TICKET_CATS (leave requests go through Leave Management,
+// not HR-SUPPORT) — harmless, simply unreachable via the Category dropdown.
 export const SUB_CATEGORIES_BY_CATEGORY = {
-  "Admin": ["Seating Arrangement", "Access Card", "Housekeeping", "Courier/Dispatch", "Others"],
-  "Login Issue": ["Password Reset", "Account Locked", "MFA/OTP Issue", "Portal Access", "Others"],
-  "Medical Insurance": ["Calculation query", "Cashless Claim", "Coverage", "Eligibility GMC and GPA", "Hospitalization", "Login issue", "Others"],
-  "Payroll/Salary": ["Notice period - F&F", "Payslip", "Previous Income declaration", "Relieving Letter", "Salary calculation", "Tax slip", "Taxation and Investment declaration", "Others"],
-  "Provident Fund/PF": ["PF Withdrawal", "UAN Query", "Balance Query", "Transfer Request", "Others"],
-  "Relocation": ["Relocation Request", "Reimbursement Query", "Documentation", "Others"],
+  "Talent Management": ["Talent Management"],
+  "Admin": ["Any admin issue"],
+  "IJP": ["Information update", "Others", "Position availablity at Branches", "Position availablity at Head Office"],
+  "Learning & Development": ["Harappa", "iAspire", "Others", "Training"],
+  "Leave": ["Attendance Regularization", "Holidays", "Leave Addition/Deletion/Approval", "Leave Balance", "Leave carry forward", "Leave Eligibilty", "Leave summary", "On Duty / Forgot to Swipe", "Others", "Pro rota calculation"],
+  "Login Issue": ["AMS Login issue", "Darwin Box Login issue", "iAspire login issue", "PrestigeOne Login issue"],
+  "Medical Insurance": ["Add Spouse/Child details", "Calculation query", "Cashless Claim", "Coverage", "Eligibility GMC and GPA", "Hospitalization", "Login issue", "Post Hospitalization", "Room Rent", "Topup"],
   "Onboarding": ["Identity Card/Business Card", "Induction", "Joining document updation", "Joining Formalities", "New Laptop Request", "Others"],
-  "IJP": ["Job Posting Query", "Application Status", "Eligibility Criteria", "Others"],
-  "Learning & Development": ["Course Enrollment", "Certification Reimbursement", "Training Calendar", "Others"],
-  "Statutory Compliance": ["PT Query", "ESIC Query", "TDS Query", "Others"],
-  "Talent Management": ["Succession Planning", "Internal Transfer", "Skill Assessment", "Others"],
-  "Performance Management": ["Goal Setting", "Appraisal Cycle", "Rating Dispute", "Others"],
-  "Prestige Stars": ["Nomination", "Award Query", "Points Redemption", "Others"],
-  "Others": ["General Query", "Feedback", "Others"],
+  "Payroll/Salary": ["Bonus and Variable Pay", "Change in Account details", "Exit clerance", "Flexi Benefit Plan", "Form 16", "Full & Final Settlement", "Investment declaration", "Investment proof upload", "LTA Taxfree/Taxable", "Notice period - F&F", "Payslip", "Previous Income declaration", "Relieving Letter", "Salary calculation", "Tax slip", "Taxation and Investment declaration", "UAN and PF"],
+  "Performance Management": ["Darwin Box", "Performance Management", "Process Related"],
+  "Prestige Stars": ["Darwin Box", "Process Related"],
+  "Provident Fund/PF": ["Approval error on PF portal", "PF number", "PF transfer", "UAN", "UAN activation"],
+  "Relocation": ["Others", "Relocation expense"],
+  "Statutory Compliance": ["Factory Act", "Others", "Shop Act"],
+  "Others": [],
+  "Team Management": [],
 };
 
 // Bespoke-form option lists (Visitor Lunch, Repair and Maintenance, Access Request/ID Card, Stationery).

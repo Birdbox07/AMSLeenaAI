@@ -1,11 +1,11 @@
-import { BESPOKE_CATS } from "./servicedesk.mock";
+import { BESPOKE_CATS, NO_SUBCATEGORY_CATS } from "./servicedesk.mock";
 
 export function validateNewTicketForm(category, form, categoryDetails) {
   const errors = {};
   if (!category) { errors.category = "Please select a category"; return errors; }
 
   if (!BESPOKE_CATS.includes(category)) {
-    if (!form.subCategory) errors.subCategory = "Please select a sub category";
+    if (!NO_SUBCATEGORY_CATS.includes(category) && !form.subCategory) errors.subCategory = "Please select a sub category";
     if (!form.description || !form.description.trim()) errors.description = "Please enter a description";
     return errors;
   }

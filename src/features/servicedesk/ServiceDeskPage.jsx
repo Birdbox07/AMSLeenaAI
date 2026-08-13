@@ -8,7 +8,7 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
 import { useServiceDeskQuery, useServiceDeskMutations } from "./hooks/useServiceDeskQuery";
 import {
-  TICKET_CATS, BESPOKE_CATS, SUB_CATEGORIES_BY_CATEGORY,
+  TICKET_CATS, BESPOKE_CATS, NO_SUBCATEGORY_CATS, SUB_CATEGORIES_BY_CATEGORY,
   LUNCH_REQUEST_TYPES, REPAIR_ITEMS, FLOORS, BLOOD_GROUPS,
   STATIONERY_CATEGORIES, STATIONERY_CATEGORY_ITEMS, STATIONERY_UNITS,
 } from "./servicedesk.mock";
@@ -68,6 +68,7 @@ export default function ServiceDeskPage() {
   const [categoryDetails, setCategoryDetails] = useState({});
 
   const isBespoke = BESPOKE_CATS.includes(newTicket.category);
+  const hasNoSubCategory = NO_SUBCATEGORY_CATS.includes(newTicket.category);
   const setDetail = (key, value) => setCategoryDetails(d => ({ ...d, [key]: value }));
 
   const myTickets = useMemo(() => tickets.filter(t => t.employeeId === CURRENT_USER.id), [tickets, CURRENT_USER]);
@@ -101,7 +102,9 @@ export default function ServiceDeskPage() {
       toast.error(Object.values(errors)[0]);
       return;
     }
-    const subject = isBespoke ? `${newTicket.category} Request` : `${newTicket.category} - ${newTicket.subCategory}`;
+    const subject = isBespoke ? `${newTicket.category} Request`
+      : hasNoSubCategory ? newTicket.category
+      : `${newTicket.category} - ${newTicket.subCategory}`;
     const ticket = {
       id: `TKT${Date.now()}`, ticketNumber: `TKT${Date.now().toString().slice(-5)}`,
       employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, category: newTicket.category,
@@ -222,12 +225,14 @@ export default function ServiceDeskPage() {
 
         {!isBespoke && (
           <>
-            <FormField label="Sub Category">
-              <select value={newTicket.subCategory} onChange={e=>setNewTicket(f=>({...f, subCategory:e.target.value}))} className={inputCls}>
-                <option value="">Please select sub category</option>
-                {(SUB_CATEGORIES_BY_CATEGORY[newTicket.category] || ["Others"]).map(sc=><option key={sc}>{sc}</option>)}
-              </select>
-            </FormField>
+            {!hasNoSubCategory && (
+              <FormField label="Sub Category">
+                <select value={newTicket.subCategory} onChange={e=>setNewTicket(f=>({...f, subCategory:e.target.value}))} className={inputCls}>
+                  <option value="">Please select sub category</option>
+                  {(SUB_CATEGORIES_BY_CATEGORY[newTicket.category] || []).map(sc=><option key={sc}>{sc}</option>)}
+                </select>
+              </FormField>
+            )}
             <FormField label="Description">
               <textarea rows={3} value={newTicket.description} onChange={e=>setNewTicket(f=>({...f, description:e.target.value}))}
                 placeholder="Tell us more about the issue" className={cn(inputCls,"resize-none")}/>
