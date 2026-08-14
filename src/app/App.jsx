@@ -14,6 +14,7 @@ import DocumentsPage from "../features/documents/DocumentsPage";
 import ServiceDeskPage from "../features/servicedesk/ServiceDeskPage";
 import LearningPage from "../features/learning/LearningPage";
 import ConferencePage from "../features/conference/ConferencePage";
+import DoctorPage from "../features/doctor/DoctorPage";
 import HolidaysPage from "../features/holidays/HolidaysPage";
 import PoliciesPage from "../features/policies/PoliciesPage";
 import SettingsPage from "../features/settings/SettingsPage";
@@ -77,6 +78,7 @@ export default function App() {
           {module === "servicedesk" && <ServiceDeskPage/>}
           {module === "learning" && <LearningPage/>}
           {module === "conference" && <ConferencePage/>}
+          {module === "doctor" && <DoctorPage/>}
           {module === "holidays" && <HolidaysPage/>}
           {module === "policies" && <PoliciesPage/>}
           {module === "settings" && <SettingsPage darkMode={darkMode} onDarkMode={toggleDark}/>}

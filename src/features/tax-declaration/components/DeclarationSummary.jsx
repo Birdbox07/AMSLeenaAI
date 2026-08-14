@@ -47,6 +47,14 @@ export default function DeclarationSummary({ declaration, onEdit, hideEditButton
         <StatusBadge status={declaration.status || "Submitted"} />
       </div>
 
+      {!hideEditButton && (
+        <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: "30ms" }}>
+          <Btn variant="secondary" size="sm" onClick={onEdit}>
+            <Pencil size={14} /> Edit Declaration
+          </Btn>
+        </div>
+      )}
+
       <div className="bg-card rounded-lg border border-border divide-y divide-border animate-fade-in-up" style={{ animationDelay: "60ms" }}>
         {rows.map(r => (
           <div key={r.label} className="py-2.5 px-4 flex items-center justify-between gap-3">
@@ -67,14 +75,6 @@ export default function DeclarationSummary({ declaration, onEdit, hideEditButton
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {!hideEditButton && (
-        <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: "180ms" }}>
-          <Btn variant="secondary" size="sm" onClick={onEdit}>
-            <Pencil size={14} /> Edit Declaration
-          </Btn>
         </div>
       )}
     </div>
