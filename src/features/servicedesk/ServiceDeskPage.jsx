@@ -6,6 +6,7 @@ import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
+import { SearchableSelect } from "../../shared/components/SearchableSelect";
 import { useServiceDeskQuery, useServiceDeskMutations } from "./hooks/useServiceDeskQuery";
 import {
   TICKET_CATS, BESPOKE_CATS, NO_SUBCATEGORY_CATS, SUB_CATEGORIES_BY_CATEGORY,
@@ -131,7 +132,7 @@ export default function ServiceDeskPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className={cn("flex items-center justify-between flex-wrap gap-2", "animate-fade-in-up")} style={{ animationDelay: "0ms" }}>
-        <h2 className="text-lg font-bold text-foreground">HR-SUPPORT</h2>
+        <h2 className="text-lg font-bold text-foreground">HR-Support</h2>
         <Btn variant="primary" size="sm" onClick={() => setShowTicketForm(true)}>
           <Plus size={14}/> Raise Ticket
         </Btn>
@@ -167,19 +168,20 @@ export default function ServiceDeskPage() {
       </div>
 
       <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
-        {[
-          { label:"Status", val:statusFilter, set:setStatusFilter, opts:["Open","In Progress","Resolved","Closed"] },
-          { label:"Category", val:catFilter, set:setCatFilter, opts:TICKET_CATS },
-        ].map(f=>(
-          <div key={f.label} className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-muted-foreground">{f.label}</label>
-            <select value={f.val} onChange={e=>f.set(e.target.value)}
-              className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background min-w-[130px] focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">All</option>
-              {f.opts.map(o=><option key={o}>{o}</option>)}
-            </select>
-          </div>
-        ))}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-muted-foreground">Status</label>
+          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background min-w-[130px] focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">All</option>
+            {["Open","In Progress","Resolved","Closed"].map(o=><option key={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1 min-w-[180px]">
+          <label className="text-xs font-semibold text-muted-foreground">Category</label>
+          <SearchableSelect value={catFilter} onChange={setCatFilter}
+            options={[{ value:"", label:"All" }, ...TICKET_CATS.map(c=>({ value:c, label:c }))]}
+            placeholder="All"/>
+        </div>
         <Btn variant="ghost" size="sm" onClick={() => { setStatusFilter(""); setCatFilter(""); }}>
           <RefreshCw size={13}/> Reset
         </Btn>
@@ -209,28 +211,25 @@ export default function ServiceDeskPage() {
           <Btn variant="secondary" size="sm" onClick={closeTicketForm}>Cancel</Btn>
         </>}>
         <FormField label="Category">
-          <select value={newTicket.category}
-            onChange={e => { setNewTicket(f=>({...f, category:e.target.value, subCategory:""})); setCategoryDetails({}); }}
-            className={inputCls}>
-            {TICKET_CATS.map(c=><option key={c}>{c}</option>)}
-          </select>
+          <SearchableSelect value={newTicket.category}
+            onChange={value => { setNewTicket(f=>({...f, category:value, subCategory:""})); setCategoryDetails({}); }}
+            options={TICKET_CATS}/>
         </FormField>
 
         {!isBespoke && (
           <>
             {!hasNoSubCategory && (
               <FormField label="Sub Category">
-                <select value={newTicket.subCategory} onChange={e=>setNewTicket(f=>({...f, subCategory:e.target.value}))} className={inputCls}>
-                  <option value="">Please select sub category</option>
-                  {(SUB_CATEGORIES_BY_CATEGORY[newTicket.category] || []).map(sc=><option key={sc}>{sc}</option>)}
-                </select>
+                <SearchableSelect value={newTicket.subCategory} onChange={value=>setNewTicket(f=>({...f, subCategory:value}))}
+                  options={SUB_CATEGORIES_BY_CATEGORY[newTicket.category] || []}
+                  placeholder="Please select sub category"/>
               </FormField>
             )}
             <FormField label="Description">
               <textarea rows={3} value={newTicket.description} onChange={e=>setNewTicket(f=>({...f, description:e.target.value}))}
                 placeholder="Tell us more about the issue" className={cn(inputCls,"resize-none")}/>
             </FormField>
-            <FormField label="Attach Files (optional)">
+            <FormField label="Attach File">
               <div className="flex items-center gap-2">
                 <Paperclip size={14} className="text-muted-foreground shrink-0"/>
                 <input type="file" onChange={e => setNewTicket(f => ({ ...f, attachmentName: e.target.files?.[0]?.name || "" }))} className={inputCls}/>

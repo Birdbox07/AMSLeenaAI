@@ -10,7 +10,6 @@ import { getLeaveBalance, LEAVE_TYPE_BY_EMP_DATE } from "../leave/leave.mock";
 import { useCurrentUser } from "../employees/hooks/useEmployees";
 import { useAttendance } from "../attendance/hooks/useAttendance";
 import { HOLIDAY_DATA } from "../holidays/holidays.mock";
-import { HolidayCalendarGrid } from "../holidays/components/HolidayCalendarGrid";
 import "./dashboard.css";
 
 export default function DashboardPage({ onNavigate }) {
@@ -257,10 +256,6 @@ export default function DashboardPage({ onNavigate }) {
             </div>
           </button>
         </div>
-      </div>
-
-      <div className="animate-fade-in-up" style={{ animationDelay: "420ms" }}>
-        <HolidayCalendarGrid holidays={HOLIDAY_DATA}/>
       </div>
     </div>
   );
