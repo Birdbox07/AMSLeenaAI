@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Users, Clock, Calendar, FileText,
   Headphones, Settings, LayoutGrid, ScrollText,
+  GraduationCap, DoorOpen, CalendarDays,
 } from "lucide-react";
 
 // Flat items render directly in the sidebar. Items with `children` render as a
@@ -12,8 +13,12 @@ export const NAV_ITEMS = [
   { id: "attendance", label: "Attendance", icon: Clock },
   { id: "leave", label: "Leave Management", icon: Calendar, badge: 14 },
   { id: "documents", label: "Documents", icon: FileText },
-  { id: "servicedesk", label: "HR-SUPPORT", icon: Headphones, badge: 32 },
-  { id: "services", label: "Services", icon: LayoutGrid },
+  { id: "servicedesk", label: "HR-Support", icon: Headphones, badge: 32 },
+  { id: "services", label: "Services", icon: LayoutGrid, children: [
+    { id: "learning", label: "Learning Portal", icon: GraduationCap },
+    { id: "conference", label: "Conference Room", icon: DoorOpen },
+    { id: "holidays", label: "Holiday Calendar", icon: CalendarDays },
+  ] },
   { id: "policies", label: "Policies", icon: ScrollText },
   { id: "settings", label: "Settings", icon: Settings },
 ];

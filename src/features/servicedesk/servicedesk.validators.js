@@ -1,7 +1,18 @@
-export function validateNewTicketForm(form) {
+import { BESPOKE_CATS, NO_SUBCATEGORY_CATS } from "./servicedesk.mock";
+
+export function validateNewTicketForm(category, form, categoryDetails) {
   const errors = {};
-  if (!form.subject || !form.subject.trim()) errors.subject = "Please enter a subject";
-  if (!form.category) errors.category = "Please select a category";
-  if (!form.priority) errors.priority = "Please select a priority";
+  if (!category) { errors.category = "Please select a category"; return errors; }
+
+  if (!BESPOKE_CATS.includes(category)) {
+    if (!NO_SUBCATEGORY_CATS.includes(category) && !form.subCategory) errors.subCategory = "Please select a sub category";
+    if (!form.description || !form.description.trim()) errors.description = "Please enter a description";
+    return errors;
+  }
+
+  if (category === "Visitor Lunch" && !categoryDetails.lunchRequestType) errors.lunchRequestType = "Please select a lunch request type";
+  if (category === "Repair and Maintenance" && !categoryDetails.repairItem) errors.repairItem = "Please select a repair item";
+  if (category === "Access Request/ID Card" && !categoryDetails.bloodGroup) errors.bloodGroup = "Please select a blood group";
+  if (category === "Stationery" && (!categoryDetails.stationeryCategory || !categoryDetails.stationeryItem)) errors.stationery = "Please select a stationery category and item";
   return errors;
 }

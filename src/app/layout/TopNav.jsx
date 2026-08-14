@@ -1,78 +1,22 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState } from "react";
 import {
-  Menu, X, Home, ChevronRight, Search, Sun, Moon, Bell,
+  Menu, X, Home, ChevronRight, Sun, Moon, Bell,
   ChevronDown, User, Settings, HelpCircle, LogOut, CheckCircle, Shield, Headphones, Clock, GraduationCap,
-  Users, Headset, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
 import { findNavLabel } from "../nav";
 import { useCurrentUser } from "../../features/employees/hooks/useEmployees";
-import { useEmployeesQuery } from "../../features/employees/hooks/useEmployeesQuery";
-import { useServiceDeskQuery } from "../../features/servicedesk/hooks/useServiceDeskQuery";
-import { useDocumentsQuery } from "../../features/documents/hooks/useDocumentsQuery";
-import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import "./TopNav.css";
 
 export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, onNavigate }) {
   const CURRENT_USER = useCurrentUser();
-  const { data: employees } = useEmployeesQuery();
-  const { data: tickets } = useServiceDeskQuery();
-  const { data: documents } = useDocumentsQuery();
-  const setPending = useGlobalSearchStore(s => s.setPending);
 
-  const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const searchBoxRef = useRef(null);
   const label = findNavLabel(module);
-
-  const results = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return null;
-    const matchEmp = e => [e.name, e.empCode, e.email, e.designation].some(v => String(v ?? "").toLowerCase().includes(q));
-    const matchTicket = t => [t.ticketNumber, t.subject].some(v => String(v ?? "").toLowerCase().includes(q));
-    const matchDoc = d => [d.fileName, d.docType, d.employeeName].some(v => String(v ?? "").toLowerCase().includes(q));
-    return {
-      employees: employees.filter(matchEmp).slice(0, 5),
-      tickets: tickets.filter(matchTicket).slice(0, 5),
-      documents: documents.filter(matchDoc).slice(0, 3),
-    };
-  }, [search, employees, tickets, documents]);
-
-  const hasResults = results && (results.employees.length || results.tickets.length || results.documents.length);
-
-  useEffect(() => {
-    const onClickOutside = (e) => {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) setShowSearch(false);
-    };
-    const onEscape = (e) => { if (e.key === "Escape") setShowSearch(false); };
-    document.addEventListener("mousedown", onClickOutside);
-    document.addEventListener("keydown", onEscape);
-    return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onEscape);
-    };
-  }, []);
-
-  const goToEmployee = (emp) => {
-    setPending("employees", emp.empCode);
-    onNavigate("employees");
-    setShowSearch(false);
-  };
-  const goToTicket = (ticket) => {
-    setPending("servicedesk", ticket.ticketNumber);
-    onNavigate("servicedesk");
-    setShowSearch(false);
-  };
-  const goToDocument = (doc) => {
-    setPending("documents", doc.fileName);
-    onNavigate("documents");
-    setShowSearch(false);
-  };
 
   return (
     <header className="h-[60px] bg-card border-b border-border flex items-center gap-3 px-4 sticky top-0 z-30 shadow-sm shrink-0">
@@ -84,72 +28,6 @@ export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, o
         <Home size={14} className="text-muted-foreground shrink-0"/>
         <ChevronRight size={12} className="text-muted-foreground shrink-0"/>
         <span className="text-foreground font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{label}</span>
-      </div>
-
-      <div className="relative hidden ml-4 sm:block" ref={searchBoxRef}>
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14}/>
-        <input
-          value={search}
-          onChange={e => { setSearch(e.target.value); setShowSearch(true); }}
-          onFocus={() => { if (search.trim()) setShowSearch(true); }}
-          placeholder="Search employees, tickets..."
-          className="py-1.5 pl-8 pr-3 text-sm border border-border rounded-md bg-input-background w-64 focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        {showSearch && results && (
-          <div className="absolute left-0 top-full mt-1 w-96 bg-popover border border-border rounded-lg shadow-xl z-50 max-h-[70vh] overflow-y-auto">
-            {!hasResults ? (
-              <div className="py-6 px-4 text-center text-sm text-muted-foreground">No results found</div>
-            ) : (
-              <>
-                {results.employees.length > 0 && (
-                  <div className="border-b border-border last:border-b-0">
-                    <div className="py-2 px-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Employees</div>
-                    {results.employees.map(e => (
-                      <button key={e.id} onClick={() => goToEmployee(e)}
-                        className="w-full flex items-center gap-2.5 py-2 px-4 text-sm transition-colors bg-transparent border-0 cursor-pointer text-left hover:bg-muted">
-                        <Users size={14} className="text-muted-foreground shrink-0"/>
-                        <span className="min-w-0">
-                          <span className="block font-medium text-foreground truncate">{e.name}</span>
-                          <span className="block text-xs text-muted-foreground truncate">{e.designation} · {e.department}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {results.tickets.length > 0 && (
-                  <div className="border-b border-border last:border-b-0">
-                    <div className="py-2 px-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tickets</div>
-                    {results.tickets.map(t => (
-                      <button key={t.id} onClick={() => goToTicket(t)}
-                        className="w-full flex items-center gap-2.5 py-2 px-4 text-sm transition-colors bg-transparent border-0 cursor-pointer text-left hover:bg-muted">
-                        <Headset size={14} className="text-muted-foreground shrink-0"/>
-                        <span className="min-w-0">
-                          <span className="block font-medium text-foreground truncate">{t.ticketNumber}</span>
-                          <span className="block text-xs text-muted-foreground truncate">{t.subject}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {results.documents.length > 0 && (
-                  <div className="border-b border-border last:border-b-0">
-                    <div className="py-2 px-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Documents</div>
-                    {results.documents.map(d => (
-                      <button key={d.id} onClick={() => goToDocument(d)}
-                        className="w-full flex items-center gap-2.5 py-2 px-4 text-sm transition-colors bg-transparent border-0 cursor-pointer text-left hover:bg-muted">
-                        <FileText size={14} className="text-muted-foreground shrink-0"/>
-                        <span className="min-w-0">
-                          <span className="block font-medium text-foreground truncate">{d.fileName}</span>
-                          <span className="block text-xs text-muted-foreground truncate">{d.docType} · {d.employeeName}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="ml-auto flex items-center gap-1">

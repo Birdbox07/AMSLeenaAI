@@ -16,3 +16,13 @@ export async function addBooking(booking) {
   await delay();
   return booking;
 }
+
+export async function updateBooking(id, patch) {
+  await delay();
+  return { id, patch };
+}
+
+export async function cancelBooking(id) {
+  await delay();
+  return id;
+}
