@@ -39,7 +39,7 @@ const CATEGORY_FIELD_LABELS = {
   stationeryFloor: "Floor",
 };
 
-const emptyNewTicket = { category: TICKET_CATS[0], subCategory: "", description: "", attachmentName: "" };
+const emptyNewTicket = { category: "", subCategory: "", description: "", attachmentName: "" };
 
 export default function ServiceDeskPage() {
   const { data: tickets } = useServiceDeskQuery();
@@ -167,16 +167,16 @@ export default function ServiceDeskPage() {
         ))}
       </div>
 
-      <div className={cn("bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
-        <div className="flex flex-col gap-1">
+      <div className={cn("relative z-10 bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end", "animate-fade-in-up")} style={{ animationDelay: "120ms" }}>
+        <div className="flex flex-col gap-1 min-w-[160px]">
           <label className="text-xs font-semibold text-muted-foreground">Status</label>
           <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background min-w-[130px] focus:outline-none focus:ring-2 focus:ring-ring">
+            className="w-full border border-border rounded-md py-2 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring">
             <option value="">All</option>
             {["Open","In Progress","Resolved","Closed"].map(o=><option key={o}>{o}</option>)}
           </select>
         </div>
-        <div className="flex flex-col gap-1 min-w-[180px]">
+        <div className="flex flex-col gap-1 min-w-[160px]">
           <label className="text-xs font-semibold text-muted-foreground">Category</label>
           <SearchableSelect value={catFilter} onChange={setCatFilter}
             options={[{ value:"", label:"All" }, ...TICKET_CATS.map(c=>({ value:c, label:c }))]}
@@ -213,7 +213,7 @@ export default function ServiceDeskPage() {
         <FormField label="Category">
           <SearchableSelect value={newTicket.category}
             onChange={value => { setNewTicket(f=>({...f, category:value, subCategory:""})); setCategoryDetails({}); }}
-            options={TICKET_CATS}/>
+            options={TICKET_CATS} placeholder="Please select Category"/>
         </FormField>
 
         {!isBespoke && (

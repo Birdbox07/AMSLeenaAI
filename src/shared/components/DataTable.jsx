@@ -9,7 +9,7 @@ import "./DataTable.css";
 
 // Generic data table. Toolbar intentionally has Search / CSV / Print only
 // (no copy-to-clipboard button) — shared by every module's table.
-export function DataTable({ columns, data, title, actions, filterExtra, hideExport }) {
+export function DataTable({ columns, data, title, actions, filterExtra, hideExport, hideSearch }) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState("");
   const [sortDir, setSortDir] = useState("asc");
@@ -55,15 +55,17 @@ export function DataTable({ columns, data, title, actions, filterExtra, hideExpo
         {title && <h3 className="font-semibold text-foreground mr-auto">{title}</h3>}
         {filterExtra}
         <div className="flex items-center gap-2 ml-auto flex-wrap">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="py-1.5 pl-8 pr-3 text-sm border border-border rounded-md bg-input-background w-48 focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          {!hideSearch && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="py-1.5 pl-8 pr-3 text-sm border border-border rounded-md bg-input-background w-48 focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          )}
           {!hideExport && (
             <button onClick={exportCSV} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Export CSV">
               <Download size={13} /> CSV

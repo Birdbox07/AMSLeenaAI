@@ -1,6 +1,6 @@
 import { DEPTS, seed, genDate } from "../../shared/mock/constants";
 
-export const POLICY_TYPES = ["IT Policies", "HR Policies", "Company Policies"];
+export const POLICY_TYPES = ["Company Policies", "HR Policies", "IT Policies"];
 
 // Folder (topic) definitions per policy type, each with the article titles
 // that belong to it — drives both the folder-grid view's article counts and
@@ -45,10 +45,15 @@ export const POLICY_FOLDERS_BY_TYPE = {
   },
 };
 
+// Only HR Policies ships with seed documents — IT Policies and Company
+// Policies start empty (folders still defined above for the folder grid,
+// just with 0 articles) until real documents are added via Add Policy.
+const SEEDED_POLICY_TYPES = ["HR Policies"];
+
 export function genPolicies() {
   const policies = [];
   let i = 0;
-  for (const policyType of POLICY_TYPES) {
+  for (const policyType of SEEDED_POLICY_TYPES) {
     const folders = POLICY_FOLDERS_BY_TYPE[policyType];
     for (const [folder, titles] of Object.entries(folders)) {
       for (const policyName of titles) {

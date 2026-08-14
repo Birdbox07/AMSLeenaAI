@@ -32,6 +32,8 @@ export function StatusBadge({ status }) {
     "Not Started": "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
     "In Progress (course)": "bg-blue-100 text-blue-700",
     Completed: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    Scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    Cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
     National: "bg-purple-100 text-purple-700",
     Regional: "bg-teal-100 text-teal-700",
     Optional: "bg-yellow-100 text-yellow-700",

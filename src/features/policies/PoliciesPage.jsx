@@ -7,6 +7,7 @@ import { Btn } from "../../shared/components/Btn";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
+import { SearchableSelect } from "../../shared/components/SearchableSelect";
 import { usePoliciesQuery, usePolicyMutations } from "./hooks/usePoliciesQuery";
 import { validatePolicyForm } from "./policies.validators";
 import { POLICY_TYPES, POLICY_FOLDERS_BY_TYPE } from "./policies.mock";
@@ -202,11 +203,9 @@ export default function PoliciesPage() {
           {errors.policyType && <span className="text-xs text-destructive">{errors.policyType}</span>}
         </FormField>
         <FormField label="Policy Category">
-          <input list="policy-folder-options" value={form.folder} onChange={e=>setForm(f=>({...f, folder:e.target.value}))}
-            placeholder="e.g. Leave, Payroll..." className={inputCls}/>
-          <datalist id="policy-folder-options">
-            {Object.keys(POLICY_FOLDERS_BY_TYPE[form.policyType] || {}).map(f => <option key={f} value={f}/>)}
-          </datalist>
+          <SearchableSelect value={form.folder} onChange={value=>setForm(f=>({...f, folder:value}))}
+            options={Object.keys(POLICY_FOLDERS_BY_TYPE[form.policyType] || {})}
+            placeholder="Select a category..."/>
           {errors.folder && <span className="text-xs text-destructive">{errors.folder}</span>}
         </FormField>
         <FormField label="Effective Date">

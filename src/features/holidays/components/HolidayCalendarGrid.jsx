@@ -2,8 +2,10 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../../shared/utils/cn";
 
-export function HolidayCalendarGrid({ holidays }) {
-  const [calMonth, setCalMonth] = useState(new Date(2025, 9, 1));
+export function HolidayCalendarGrid({ holidays, month: monthProp, onMonthChange }) {
+  const [internalMonth, setInternalMonth] = useState(new Date(2025, 9, 1));
+  const calMonth = monthProp || internalMonth;
+  const setCalMonth = onMonthChange || setInternalMonth;
 
   const year = calMonth.getFullYear();
   const month = calMonth.getMonth();
