@@ -79,8 +79,8 @@ export default function PoliciesPage() {
   ];
 
   const tableCols = [
-    { key:"folder", label:"Policy Name" },
-    { key:"policyName", label:"Policy Category", render: p => <span className="font-medium">{p.policyName}</span> },
+    { key:"folder", label:"Policy Category" },
+    { key:"policyName", label:"Policy Name", render: p => <span className="font-medium">{p.policyName}</span> },
     { key:"effectiveDate", label:"Effective Date" },
   ];
 
