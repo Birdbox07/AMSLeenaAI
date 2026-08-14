@@ -1,181 +1,424 @@
 import { useState, useMemo } from "react";
-import { Plus, MapPin, Users, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, LayoutGrid, List, Plus, Pencil, X, Phone, Mail, User as UserIcon, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { LOCS } from "../../shared/mock/constants";
+import { cn } from "../../shared/utils/cn";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { Btn } from "../../shared/components/Btn";
-import { StatusBadge } from "../../shared/components/StatusBadge";
-import { DataTable } from "../../shared/components/DataTable";
-import { cn } from "../../shared/utils/cn";
 import { useConferenceQuery, useConferenceMutations } from "./hooks/useConferenceQuery";
 import { validateBookingForm } from "./conference.validators";
-import { SLOT_TIMES } from "./conference.mock";
+import {
+  CONFERENCE_LOCATIONS, CONFERENCE_ROOMS_BY_LOCATION, MEAL_OPTIONS, TIME_SLOTS, minutesToLabel,
+} from "./conference.mock";
 import { useCurrentUser } from "../employees/hooks/useEmployees";
 import "./conference.css";
 
+const filterSelectCls = "border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[180px]";
+
+function fmtDate(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isPastSlot(dateStr, slotStart) {
+  const now = new Date();
+  const todayStr = fmtDate(now);
+  if (dateStr < todayStr) return true;
+  if (dateStr === todayStr) return slotStart < now.getHours() * 60 + now.getMinutes();
+  return false;
+}
+
+const emptyForm = { date: "", start: null, end: null, purpose: "", attendees: "", breakfast: "Not Required", tea: "Not Required", lunch: "Not Required" };
+
 export default function ConferencePage() {
-  const { rooms: CONFERENCE_ROOMS, bookings } = useConferenceQuery();
-  const { add } = useConferenceMutations();
+  const { data: bookings } = useConferenceQuery();
+  const { add, update, cancel } = useConferenceMutations();
   const CURRENT_USER = useCurrentUser();
 
-  const [locFilter, setLocFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
-  const [bookRoom, setBookRoom] = useState(null);
-  const [subject, setSubject] = useState("");
+  const [location, setLocation] = useState("");
+  const [room, setRoom] = useState("");
+  const [view, setView] = useState("calendar");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [tableDate, setTableDate] = useState(fmtDate(new Date()));
 
-  const rooms = useMemo(() =>
-    CONFERENCE_ROOMS.filter(r => !locFilter || r.location === locFilter),
-    [CONFERENCE_ROOMS, locFilter]
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // "add" | "edit"
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const roomsForLocation = CONFERENCE_ROOMS_BY_LOCATION[location] || [];
+  const hasSelection = !!location && !!room;
+
+  const scopedBookings = useMemo(() =>
+    hasSelection ? bookings.filter(b => b.location === location && b.room === room) : [],
+    [bookings, location, room, hasSelection]
   );
 
-  const bookingsForDate = useMemo(() =>
-    bookings.filter(b => b.date === dateFilter),
-    [bookings, dateFilter]
-  );
+  const findBooking = (dateStr, slotStart) =>
+    scopedBookings.find(b => b.date === dateStr && slotStart >= b.start && slotStart < b.end);
 
-  const bookingsFor = (roomId) =>
-    bookingsForDate.filter(b => b.roomId === roomId).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const isMyBooking = (b) => !!b && b.employeeId === CURRENT_USER.id;
 
-  const bookingCols = [
-    { key:"roomId", label:"Room", render: b => <span className="font-medium">{CONFERENCE_ROOMS.find(r=>r.id===b.roomId)?.name}</span> },
-    { key:"bookedBy", label:"Booked By" },
-    { key:"subject", label:"Subject" },
-    { key:"date", label:"Date" },
-    { key:"startTime", label:"Start" },
-    { key:"endTime", label:"End" },
-  ];
+  const weekDates = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() + weekOffset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      return d;
+    });
+  }, [weekOffset]);
+
+  const todayStr = fmtDate(new Date());
+
+  const changeLocation = (val) => {
+    setLocation(val);
+    setRoom("");
+  };
+
+  const openAddModal = (dateStr, start, end) => {
+    setModalMode("add");
+    setEditingId(null);
+    setForm({ ...emptyForm, date: dateStr, start, end });
+    setShowModal(true);
+  };
+
+  const openEditModal = (booking) => {
+    setModalMode("edit");
+    setEditingId(booking.id);
+    setForm({
+      date: booking.date, start: booking.start, end: booking.end,
+      purpose: booking.purpose, attendees: booking.attendees,
+      breakfast: booking.breakfast, tea: booking.tea, lunch: booking.lunch,
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
+  const submitModal = () => {
+    const payload = { location, room, date: form.date, start: form.start, end: form.end, purpose: form.purpose, attendees: Number(form.attendees) };
+    const errors = validateBookingForm(payload, scopedBookings, modalMode === "edit" ? editingId : null);
+    if (Object.keys(errors).length) { toast.error(Object.values(errors)[0]); return; }
+
+    if (modalMode === "add") {
+      add({
+        id: `BKG${Date.now()}`, location, room, date: form.date, start: form.start, end: form.end,
+        employeeId: CURRENT_USER.id, employeeName: CURRENT_USER.name, contact: CURRENT_USER.mobile, email: CURRENT_USER.email,
+        purpose: form.purpose.trim(), attendees: Number(form.attendees),
+        breakfast: form.breakfast, tea: form.tea, lunch: form.lunch,
+      });
+      toast.success(`${room} booked for ${minutesToLabel(form.start)}–${minutesToLabel(form.end)}`);
+    } else {
+      update(editingId, {
+        date: form.date, start: form.start, end: form.end,
+        purpose: form.purpose.trim(), attendees: Number(form.attendees),
+        breakfast: form.breakfast, tea: form.tea, lunch: form.lunch,
+      });
+      toast.success("Booking updated");
+    }
+    closeModal();
+  };
+
+  const cancelBookingFromModal = () => {
+    if (!editingId) return;
+    cancel(editingId);
+    toast.success("Booking cancelled");
+    closeModal();
+  };
 
   return (
     <div className="conference-page flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-3 animate-fade-in-up" style={{ animationDelay: "0ms" }}>
         <h2 className="text-lg font-bold text-foreground">Conference Room Booking</h2>
-        <Btn variant="primary" size="sm" onClick={() => { if (!rooms.length) { toast.error("No rooms available"); return; } setBookRoom(rooms[0]); setSubject(""); }}>
-          <Plus size={14}/> New Booking
+        <Btn variant="secondary" size="sm" onClick={() => toast.info("Refreshed")}>
+          <RefreshCw size={13}/> Refresh
         </Btn>
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap gap-3 items-end animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+      <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-end gap-3 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-muted-foreground">Location</label>
-          <select value={locFilter} onChange={e=>setLocFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background min-w-[150px] focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">All Locations</option>
-            {LOCS.map(l=><option key={l}>{l}</option>)}
+          <select value={location} onChange={e => changeLocation(e.target.value)} className={filterSelectCls}>
+            <option value="">Select location...</option>
+            {CONFERENCE_LOCATIONS.map(l => <option key={l}>{l}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-muted-foreground">Date</label>
-          <input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}
-            className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring"/>
+          <label className="text-xs font-semibold text-muted-foreground">Room</label>
+          <select value={room} onChange={e => setRoom(e.target.value)} disabled={!location} className={cn(filterSelectCls, "min-w-[260px] disabled:opacity-50")}>
+            <option value="">{location ? (roomsForLocation.length ? "Select room..." : "No rooms available") : "Select a location first"}</option>
+            {roomsForLocation.map(r => <option key={r}>{r}</option>)}
+          </select>
         </div>
-        {locFilter && (
-          <Btn variant="ghost" size="sm" onClick={() => setLocFilter("")}>
-            <RefreshCw size={13}/> Reset
-          </Btn>
-        )}
+
+        <div className="flex gap-1 bg-muted p-1 rounded-lg ml-auto">
+          <button onClick={() => setView("calendar")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer",
+              view==="calendar" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <LayoutGrid size={13}/> Calendar
+          </button>
+          <button onClick={() => setView("table")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-3 text-sm font-medium rounded-md transition-colors border-none cursor-pointer",
+              view==="table" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <List size={13}/> Table
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {rooms.map((room, i) => {
-          const dayBookings = bookingsFor(room.id);
-          const isFree = dayBookings.length === 0;
-          return (
-            <button
-              key={room.id}
-              onClick={() => { setBookRoom(room); setSubject(""); }}
-              className="text-left bg-card rounded-lg border border-border p-4 transition-all duration-150 hover:shadow-md hover:border-primary hover-lift animate-fade-in-up"
-              style={{ animationDelay: `${i*40}ms` }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-foreground">{room.name}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <MapPin size={11}/> {room.location} · {room.floor}
-                  </p>
-                </div>
-                <span className="flex items-center gap-1.5">
-                  {!isFree && <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse-dot"/>}
-                  <StatusBadge status={isFree ? "Available" : "Occupied"} />
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                <Users size={11}/> Capacity: {room.capacity}
-              </p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {room.amenities.map(a => (
-                  <span key={a} className="text-[10px] py-0.5 px-2 bg-secondary text-secondary-foreground rounded-full">{a}</span>
-                ))}
-              </div>
-              {dayBookings.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-border flex flex-col gap-1">
-                  {dayBookings.map(b => (
-                    <p key={b.id} className="text-[11px] text-muted-foreground">
-                      <span className="font-medium text-foreground">{b.startTime}–{b.endTime}</span> · {b.subject} ({b.bookedBy})
-                    </p>
-                  ))}
-                </div>
-              )}
+      <div className="flex gap-4 flex-wrap text-[11px] text-muted-foreground animate-fade-in-up" style={{ animationDelay: "90ms" }}>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block bg-card border border-border"/>Available</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800"/>Booked</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block bg-yellow-100 border border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-800"/>My Booking</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block bg-muted border border-border"/>Past</span>
+      </div>
+
+      {view === "calendar" ? (
+        <div className="bg-card rounded-lg border border-border shadow-sm animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center gap-2 p-3 flex-wrap">
+            <button onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={weekOffset <= 0}
+              className="flex items-center gap-1 py-1 px-2.5 text-xs font-medium border border-border rounded-md bg-card cursor-pointer transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft size={13}/> Prev
             </button>
-          );
-        })}
-      </div>
+            <button onClick={() => setWeekOffset(0)}
+              className="py-1 px-2.5 text-xs font-medium border border-border rounded-md bg-card cursor-pointer transition-colors hover:bg-muted">
+              Today
+            </button>
+            <button onClick={() => setWeekOffset(w => w + 1)}
+              className="flex items-center gap-1 py-1 px-2.5 text-xs font-medium border border-border rounded-md bg-card cursor-pointer transition-colors hover:bg-muted">
+              Next <ChevronRight size={13}/>
+            </button>
+            <span className="text-sm font-semibold text-foreground ml-1">{fmtDate(weekDates[0])} – {fmtDate(weekDates[6])}</span>
+          </div>
 
-      <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
-        <DataTable
-          title={`Bookings for ${dateFilter}`}
-          columns={bookingCols}
-          data={bookingsForDate}
-        />
-      </div>
+          {!hasSelection ? (
+            <p className="text-sm text-muted-foreground text-center py-16">Select a location and room to view the calendar</p>
+          ) : (
+            <div className="overflow-auto max-h-[480px] border-t border-border">
+              <table className="border-collapse w-full text-[10px] select-none" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "56px" }}/>
+                  {weekDates.map((_, i) => <col key={i}/>)}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="sticky top-0 left-0 z-20 bg-muted py-1.5 text-[10px] font-semibold text-foreground border-b border-r border-border">Time</th>
+                    {weekDates.map((d, i) => {
+                      const dStr = fmtDate(d);
+                      const today = dStr === todayStr;
+                      return (
+                        <th key={i} className={cn("sticky top-0 z-10 py-1.5 px-1 text-center border-b border-border font-semibold", today ? "bg-primary/10 text-primary" : "bg-muted text-foreground")}>
+                          {d.toLocaleDateString("en", { weekday: "short" })}
+                          <span className="block font-normal text-muted-foreground text-[9px]">{dStr.slice(5)}</span>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIME_SLOTS.map((slot, rowIdx) => (
+                    <tr key={slot.start}>
+                      <td className="sticky left-0 z-10 bg-muted text-center text-[9px] text-muted-foreground border-r border-b border-border whitespace-nowrap px-1" style={{ height: "16px" }}>
+                        {slot.label}
+                      </td>
+                      {weekDates.map((d, dayIdx) => {
+                        const dStr = fmtDate(d);
+                        const past = isPastSlot(dStr, slot.start);
+                        const booking = findBooking(dStr, slot.start);
+                        const mine = isMyBooking(booking);
 
-      <Modal open={!!bookRoom} onClose={() => setBookRoom(null)} title={bookRoom ? `Book ${bookRoom.name}` : "Book Room"} maxWidth="max-w-lg"
-        footer={<Btn variant="secondary" size="sm" onClick={() => setBookRoom(null)}>Close</Btn>}>
-        {bookRoom && (() => {
-          const taken = new Set(bookingsFor(bookRoom.id).map(b=>b.startTime));
-          return (
-            <>
-              <p className="text-xs text-muted-foreground">{bookRoom.location} · {bookRoom.floor} · Capacity {bookRoom.capacity}</p>
-              <FormField label="Meeting Subject">
-                <input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="e.g. Sprint Planning" className={inputCls}/>
-              </FormField>
-              <FormField label={`Available slots on ${dateFilter}`}>
-                <div className="grid grid-cols-4 gap-2">
-                  {SLOT_TIMES.map(time => {
-                    const isTaken = taken.has(time);
+                        return (
+                          <td key={dayIdx}
+                            onClick={() => {
+                              if (past) return;
+                              if (booking) { if (mine) openEditModal(booking); return; }
+                              openAddModal(dStr, slot.start, slot.end);
+                            }}
+                            className={cn(
+                              "relative border border-border p-0 group",
+                              past && "bg-muted cursor-not-allowed",
+                              !past && !booking && "bg-card hover:bg-primary/10 cursor-pointer",
+                              !past && booking && !mine && "bg-red-100 dark:bg-red-900/30 cursor-not-allowed",
+                              !past && booking && mine && "bg-yellow-100 dark:bg-yellow-900/30 cursor-pointer hover:opacity-80"
+                            )}
+                            style={{ height: "16px" }}
+                          >
+                            {booking && (
+                              <div className={cn(
+                                "hidden group-hover:block absolute z-30 left-1/2 -translate-x-1/2 w-56 bg-popover border border-border rounded-lg shadow-xl p-2.5 text-left text-xs",
+                                rowIdx < 3 ? "top-full mt-1" : "bottom-full mb-1"
+                              )}>
+                                <p className="font-semibold text-foreground text-[11px]">{dStr} · {minutesToLabel(booking.start)}–{minutesToLabel(booking.end)}</p>
+                                <p className="flex items-center gap-1.5 text-muted-foreground mt-1"><UserIcon size={11}/> {booking.employeeName}</p>
+                                {booking.contact && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5"><Phone size={11}/> {booking.contact}</p>}
+                                {booking.email && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5 truncate"><Mail size={11}/> {booking.email}</p>}
+                                <p className="italic text-muted-foreground mt-1.5 pt-1.5 border-t border-border">{booking.purpose}</p>
+                                {mine && (
+                                  <div className="flex justify-end gap-1.5 mt-1.5 pt-1.5 border-t border-border">
+                                    <button onClick={(e) => { e.stopPropagation(); openEditModal(booking); }}
+                                      className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-primary text-primary-foreground border-none cursor-pointer">
+                                      <Pencil size={9}/> Edit
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); cancel(booking.id); toast.success("Booking cancelled"); }}
+                                      className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-destructive text-white border-none cursor-pointer">
+                                      <X size={9}/> Cancel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-card rounded-lg border border-border shadow-sm animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center gap-2 p-3 flex-wrap border-b border-border">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5"><Clock size={12}/> Date</label>
+            <input type="date" value={tableDate} onChange={e => setTableDate(e.target.value)}
+              className="border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring"/>
+            <button onClick={() => setTableDate(todayStr)}
+              className="py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-card cursor-pointer transition-colors hover:bg-muted">
+              Today
+            </button>
+          </div>
+
+          {!hasSelection ? (
+            <p className="text-sm text-muted-foreground text-center py-16">Select a location and room to view bookings</p>
+          ) : (
+            <div className="overflow-auto max-h-[480px]">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-left text-muted-foreground bg-muted sticky top-0 z-10">
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">Action</th>
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">Start</th>
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">End</th>
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">Status</th>
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">Employee</th>
+                    <th className="py-1.5 px-3 font-semibold text-[11px]">Contact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIME_SLOTS.filter(slot => tableDate !== todayStr || !isPastSlot(tableDate, slot.start)).map(slot => {
+                    const past = isPastSlot(tableDate, slot.start);
+                    const booking = findBooking(tableDate, slot.start);
+                    const mine = isMyBooking(booking);
+                    const rowCls = past ? "bg-muted/40" : booking ? (mine ? "bg-yellow-50 dark:bg-yellow-900/10" : "bg-red-50 dark:bg-red-900/10") : "";
+
                     return (
-                      <button key={time} disabled={isTaken}
-                        onClick={() => {
-                          const [h] = time.split(":").map(Number);
-                          const endTime = `${String(h+1).padStart(2,"0")}:00`;
-                          const form = { roomId: bookRoom.id, date: dateFilter, startTime: time, endTime, subject };
-                          const errors = validateBookingForm(form, bookings);
-                          if (Object.keys(errors).length) {
-                            toast.error(Object.values(errors)[0]);
-                            return;
-                          }
-                          add({
-                            id: `BKG${Date.now()}`, roomId: bookRoom.id, bookedBy: CURRENT_USER.name,
-                            date: dateFilter, startTime: time, endTime, subject: subject.trim(),
-                          });
-                          toast.success(`${bookRoom.name} booked at ${time} for "${subject.trim()}"`);
-                          setBookRoom(null);
-                        }}
-                        className={cn(
-                          "py-1.5 px-2 text-xs font-medium rounded-md border transition-colors duration-150",
-                          isTaken
-                            ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
-                            : "bg-transparent border-border cursor-pointer hover:border-primary hover:bg-secondary"
-                        )}
-                      >
-                        {time}
-                      </button>
+                      <tr key={slot.start} className={cn("border-b border-border", rowCls)}>
+                        <td className="py-1 px-3">
+                          {past ? (
+                            <span className="text-[11px] text-muted-foreground italic">Past</span>
+                          ) : booking ? (
+                            mine ? (
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => openEditModal(booking)} title="Edit"
+                                  className="p-1 rounded-md border border-border bg-card cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary">
+                                  <Pencil size={12}/>
+                                </button>
+                                <button onClick={() => { cancel(booking.id); toast.success("Booking cancelled"); }} title="Cancel"
+                                  className="p-1 rounded-md border border-border bg-card cursor-pointer transition-colors hover:bg-destructive hover:text-white hover:border-destructive">
+                                  <X size={12}/>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground italic">View only</span>
+                            )
+                          ) : (
+                            <button onClick={() => openAddModal(tableDate, slot.start, slot.end)}
+                              className="flex items-center gap-1 py-1 px-2.5 text-[11px] font-semibold rounded-md border border-green-600 text-green-700 bg-card cursor-pointer transition-colors hover:bg-green-600 hover:text-white dark:text-green-400">
+                              <Plus size={11}/> Book
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-1 px-3 text-foreground">{slot.label}</td>
+                        <td className="py-1 px-3 text-foreground">{minutesToLabel(slot.end)}</td>
+                        <td className="py-1 px-3">
+                          <span className={cn("inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold",
+                            past ? "bg-muted text-muted-foreground" : booking ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300")}>
+                            {past ? "Past" : booking ? "Booked" : "Available"}
+                          </span>
+                        </td>
+                        <td className="py-1 px-3 text-foreground">{booking?.employeeName || "-"}</td>
+                        <td className="py-1 px-3 text-foreground">{booking?.contact || "-"}</td>
+                      </tr>
                     );
                   })}
-                </div>
-              </FormField>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Modal open={showModal} onClose={closeModal} maxWidth="max-w-md"
+        title={modalMode === "add" ? "Book Room" : "My Booking"}
+        footer={<>
+          {modalMode === "add" ? (
+            <Btn variant="primary" size="sm" onClick={submitModal}>Book</Btn>
+          ) : (
+            <>
+              <Btn variant="primary" size="sm" onClick={submitModal}>Update</Btn>
+              <Btn variant="danger" size="sm" onClick={cancelBookingFromModal}>Cancel Booking</Btn>
             </>
-          );
-        })()}
+          )}
+          <Btn variant="secondary" size="sm" onClick={closeModal}>Close</Btn>
+        </>}>
+        <p className="text-xs text-muted-foreground -mt-2">{location} · {room}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <FormField label="Date">
+            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls}/>
+          </FormField>
+          <FormField label="Start Time">
+            <select value={form.start ?? ""} onChange={e => setForm(f => ({ ...f, start: Number(e.target.value) }))} className={inputCls}>
+              {TIME_SLOTS.map(s => <option key={s.start} value={s.start}>{s.label}</option>)}
+            </select>
+          </FormField>
+          <FormField label="End Time">
+            <select value={form.end ?? ""} onChange={e => setForm(f => ({ ...f, end: Number(e.target.value) }))} className={inputCls}>
+              {TIME_SLOTS.map(s => <option key={s.end} value={s.end}>{minutesToLabel(s.end)}</option>)}
+            </select>
+          </FormField>
+        </div>
+        <FormField label="Purpose">
+          <input value={form.purpose} maxLength={50} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} placeholder="Enter meeting purpose..." className={inputCls}/>
+          <span className="text-[10px] text-muted-foreground text-right">{form.purpose.length}/50</span>
+        </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Attendees">
+            <input type="number" min="1" value={form.attendees} onChange={e => setForm(f => ({ ...f, attendees: e.target.value }))} placeholder="Number" className={inputCls}/>
+          </FormField>
+          <FormField label="Breakfast">
+            <select value={form.breakfast} onChange={e => setForm(f => ({ ...f, breakfast: e.target.value }))} className={inputCls}>
+              {MEAL_OPTIONS.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </FormField>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Tea">
+            <select value={form.tea} onChange={e => setForm(f => ({ ...f, tea: e.target.value }))} className={inputCls}>
+              {MEAL_OPTIONS.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Lunch">
+            <select value={form.lunch} onChange={e => setForm(f => ({ ...f, lunch: e.target.value }))} className={inputCls}>
+              {MEAL_OPTIONS.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </FormField>
+        </div>
       </Modal>
     </div>
   );
