@@ -1,7 +1,7 @@
 import { seed, genDate } from "../../shared/mock/constants";
 import { EMPLOYEES } from "../employees/employees.mock";
 
-export const DOC_TYPES = ["Payslip","Form 16","Appointment Letter","Increment Letter","Medical Insurance","Identity Card","Offer Letter","Relieving Letter"];
+export const DOC_TYPES = ["Payslip","Form 16 Part-A","Form 16 Part-B","Increment Letter","Mediclaim","Income Tax declaration"];
 export const ALLOWED_DOC_EXTENSIONS = ["pdf","doc","docx","jpg","jpeg","png"];
 export const MAX_BULK_FILE_SIZE = 5 * 1024 * 1024;
 

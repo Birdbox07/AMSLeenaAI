@@ -81,7 +81,6 @@ export function Sidebar({ active, onNav, collapsed, onToggle }) {
         {!collapsed && (
           <div className="overflow-hidden">
             <p className="text-sm font-bold text-white leading-tight overflow-hidden text-ellipsis whitespace-nowrap">AMS Portal</p>
-            <p className="text-[10px] text-white/50 overflow-hidden text-ellipsis whitespace-nowrap">Workforce Management</p>
           </div>
         )}
       </div>

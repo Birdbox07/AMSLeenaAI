@@ -16,7 +16,6 @@ import { validateBulkFile } from "../documents/documents.validators";
 import { useDocumentMutations } from "../documents/hooks/useDocumentsQuery";
 import { FamilyDetailsModal } from "./components/FamilyDetailsModal";
 import { BulkImportEmployeesModal } from "./components/BulkImportEmployeesModal";
-import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import OrgPage from "../org/OrgPage";
 import "./employees.css";
 
@@ -40,12 +39,6 @@ export default function EmployeesPage() {
 
   const [familyEmp, setFamilyEmp] = useState(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
-
-  const [initialSearch, setInitialSearch] = useState("");
-  useEffect(() => {
-    const q = useGlobalSearchStore.getState().consumePending("employees");
-    if (q) setInitialSearch(q);
-  }, []);
 
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [bulkDocType, setBulkDocType] = useState(DOC_TYPES[0]);
@@ -244,7 +237,6 @@ export default function EmployeesPage() {
       <DataTable
         columns={cols}
         data={filtered}
-        initialSearch={initialSearch}
         actions={(row) => (
           <>
             <button onClick={() => setViewEmp(row)}

@@ -12,7 +12,9 @@ import AttendancePage from "../features/attendance/AttendancePage";
 import LeavePage from "../features/leave/LeavePage";
 import DocumentsPage from "../features/documents/DocumentsPage";
 import ServiceDeskPage from "../features/servicedesk/ServiceDeskPage";
-import ServicesPage from "../features/services/ServicesPage";
+import LearningPage from "../features/learning/LearningPage";
+import ConferencePage from "../features/conference/ConferencePage";
+import HolidaysPage from "../features/holidays/HolidaysPage";
 import PoliciesPage from "../features/policies/PoliciesPage";
 import SettingsPage from "../features/settings/SettingsPage";
 
@@ -73,7 +75,9 @@ export default function App() {
           {module === "leave" && <LeavePage/>}
           {module === "documents" && <DocumentsPage/>}
           {module === "servicedesk" && <ServiceDeskPage/>}
-          {module === "services" && <ServicesPage/>}
+          {module === "learning" && <LearningPage/>}
+          {module === "conference" && <ConferencePage/>}
+          {module === "holidays" && <HolidaysPage/>}
           {module === "policies" && <PoliciesPage/>}
           {module === "settings" && <SettingsPage darkMode={darkMode} onDarkMode={toggleDark}/>}
         </main>

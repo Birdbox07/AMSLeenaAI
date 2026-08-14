@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Search, Download, Printer, AlertCircle, ArrowUpDown,
+  Search, Download, AlertCircle, ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/cn";
@@ -9,8 +9,8 @@ import "./DataTable.css";
 
 // Generic data table. Toolbar intentionally has Search / CSV / Print only
 // (no copy-to-clipboard button) — shared by every module's table.
-export function DataTable({ columns, data, title, actions, filterExtra, initialSearch, hideExport, hidePrint }) {
-  const [search, setSearch] = useState(initialSearch || "");
+export function DataTable({ columns, data, title, actions, filterExtra, hideExport }) {
+  const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -67,11 +67,6 @@ export function DataTable({ columns, data, title, actions, filterExtra, initialS
           {!hideExport && (
             <button onClick={exportCSV} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Export CSV">
               <Download size={13} /> CSV
-            </button>
-          )}
-          {!hidePrint && (
-            <button onClick={() => toast.success("Printing...")} className="flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium border border-border rounded-md bg-transparent cursor-pointer transition-colors hover:bg-muted" title="Print">
-              <Printer size={13} />
             </button>
           )}
         </div>

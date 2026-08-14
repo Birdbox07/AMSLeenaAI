@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Eye, Pencil, RefreshCw, User, Users, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
@@ -15,7 +15,6 @@ import {
 import { validateNewTicketForm } from "./servicedesk.validators";
 import { useCurrentUser, useMyReportees } from "../employees/hooks/useEmployees";
 import { useHasRole } from "../../shared/access/role.store";
-import { useGlobalSearchStore } from "../../shared/utils/globalSearch.store";
 import { CountUp } from "../../shared/components/CountUp";
 import "./servicedesk.css";
 
@@ -52,12 +51,6 @@ export default function ServiceDeskPage() {
   const reporteeIds = useMemo(() => new Set(MY_REPORTEES.map(e => e.id)), [MY_REPORTEES]);
 
   const [tab, setTab] = useState("mine");
-
-  const [initialSearch, setInitialSearch] = useState("");
-  useEffect(() => {
-    const q = useGlobalSearchStore.getState().consumePending("servicedesk");
-    if (q) setInitialSearch(q);
-  }, []);
 
   const [statusFilter, setStatusFilter] = useState("");
   const [catFilter, setCatFilter] = useState("");
@@ -195,7 +188,7 @@ export default function ServiceDeskPage() {
       <div className="animate-fade-in-up" style={{ animationDelay: "180ms" }}>
       <DataTable
         title={tab === "assigned" ? "Assigned Tickets" : "My Tickets"}
-        columns={cols} data={filtered} initialSearch={initialSearch}
+        columns={cols} data={filtered}
         actions={(row) => {
           const t = row;
           return (

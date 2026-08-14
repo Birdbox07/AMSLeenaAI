@@ -37,7 +37,7 @@ export default function DashboardPage({ onNavigate }) {
     [leaves, CURRENT_USER]
   );
 
-  const upcomingHolidays = useMemo(() => [...HOLIDAY_DATA].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3), []);
+  const upcomingHolidays = useMemo(() => [...HOLIDAY_DATA].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8), []);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -243,7 +243,7 @@ export default function DashboardPage({ onNavigate }) {
             </table>
           </div>
 
-          <button onClick={() => onNavigate("services")}
+          <button onClick={() => onNavigate("holidays")}
             className={cn("text-left bg-card rounded-lg border border-border shadow-sm p-4 transition-all duration-200 hover:shadow-md hover:border-primary hover:-translate-y-0.5", "animate-fade-in-up")}
             style={{ animationDelay: "360ms" }}>
             <p className="text-xs font-semibold text-muted-foreground mb-2">Upcoming Holidays</p>

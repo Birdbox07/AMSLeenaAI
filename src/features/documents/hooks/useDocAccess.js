@@ -6,10 +6,10 @@ const ALL_TRUE = { canPayslip: true, canEmployeeDoc: true, canMediclaim: true, c
 // Mediclaim, else the first allowed panel, else null.
 function computeDefaultPanel(flags) {
   if (flags.canPayslip) return "Payslip";
-  if (flags.canMediclaim) return "Medical Insurance";
+  if (flags.canMediclaim) return "Mediclaim";
   if (flags.canEmployeeDoc) return "Employee Documents";
-  if (flags.canForm16A) return "Form 16 Part A";
-  if (flags.canForm16B) return "Form 16 Part B";
+  if (flags.canForm16A) return "Form 16 Part-A";
+  if (flags.canForm16B) return "Form 16 Part-B";
   return null;
 }
 
@@ -19,8 +19,9 @@ function computeDefaultPanel(flags) {
 export function isDocTypeAllowed(flags, docType) {
   switch (docType) {
     case "Payslip": return flags.canPayslip;
-    case "Medical Insurance": return flags.canMediclaim;
-    case "Form 16": return flags.canForm16A || flags.canForm16B;
+    case "Mediclaim": return flags.canMediclaim;
+    case "Form 16 Part-A": return flags.canForm16A;
+    case "Form 16 Part-B": return flags.canForm16B;
     default: return flags.canEmployeeDoc;
   }
 }
