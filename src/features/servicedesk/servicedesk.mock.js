@@ -3,9 +3,9 @@ import { EMPLOYEES } from "../employees/employees.mock";
 
 export const TICKET_CATS = [
   "Admin","Login Issue","Medical Insurance","Payroll/Salary","Provident Fund/PF","Relocation",
-  "Access Request/ID Card","Visitor Lunch","Stationery","Repair and Maintenance","Onboarding",
-  "Internal Job Posting (IJP)","Learning & Development","Statutory Compliance","Performance Management",
-  "Prestige Stars","Talent Management","Others",
+  "Access Request/ID Card","Visitor Lunch","Stationery","Repair and Maintenance","Onboarding","IJP",
+  "Learning & Development","Statutory Compliance","Talent Management","Team Management","Performance Management",
+  "Prestige Stars","Others",
 ];
 
 // These 4 categories use a dedicated multi-field form (ported from the legacy
@@ -14,15 +14,16 @@ export const BESPOKE_CATS = ["Access Request/ID Card", "Visitor Lunch", "Station
 
 // Categories that have no meaningful sub-category breakdown — the Sub
 // Category field is hidden/disabled entirely for these two.
-export const NO_SUBCATEGORY_CATS = ["Others", "Talent Management"];
+export const NO_SUBCATEGORY_CATS = ["Others", "Team Management"];
 
 // Category -> Sub Category cascading dropdown data, ported verbatim from the
 // LEENA AI ticketing form. "Leave" is included for completeness even though
 // it isn't one of TICKET_CATS (leave requests go through Leave Management,
 // not HR-SUPPORT) — harmless, simply unreachable via the Category dropdown.
 export const SUB_CATEGORIES_BY_CATEGORY = {
+  "Talent Management": ["Talent Management"],
   "Admin": ["Any admin issue"],
-  "Internal Job Posting (IJP)": ["Information update", "Others", "Position availablity at Branches", "Position availablity at Head Office"],
+  "IJP": ["Information update", "Others", "Position availablity at Branches", "Position availablity at Head Office"],
   "Learning & Development": ["Harappa", "iAspire", "Others", "Training"],
   "Leave": ["Attendance Regularization", "Holidays", "Leave Addition/Deletion/Approval", "Leave Balance", "Leave carry forward", "Leave Eligibilty", "Leave summary", "On Duty / Forgot to Swipe", "Others", "Pro rota calculation"],
   "Login Issue": ["AMS Login issue", "Darwin Box Login issue", "iAspire login issue", "PrestigeOne Login issue"],
@@ -35,7 +36,7 @@ export const SUB_CATEGORIES_BY_CATEGORY = {
   "Relocation": ["Others", "Relocation expense"],
   "Statutory Compliance": ["Factory Act", "Others", "Shop Act"],
   "Others": [],
-  "Talent Management": [],
+  "Team Management": [],
 };
 
 // Bespoke-form option lists (Visitor Lunch, Repair and Maintenance, Access Request/ID Card, Stationery).

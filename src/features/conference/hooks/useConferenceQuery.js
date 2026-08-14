@@ -1,26 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CONFERENCE_ROOMS, ROOM_BOOKINGS } from "../conference.mock";
-import { getRooms, getBookings, addBooking, updateBooking, cancelBooking } from "../conference.service";
+import { BOOKINGS } from "../conference.mock";
+import { getBookings, addBooking, updateBooking, cancelBooking } from "../conference.service";
 
-export const CONFERENCE_ROOMS_QUERY_KEY = ["conference", "rooms"];
 export const CONFERENCE_BOOKINGS_QUERY_KEY = ["conference", "bookings"];
 
 export function useConferenceQuery() {
-  const roomsQuery = useQuery({
-    queryKey: CONFERENCE_ROOMS_QUERY_KEY,
-    queryFn: getRooms,
-    initialData: CONFERENCE_ROOMS,
-  });
-  const bookingsQuery = useQuery({
+  return useQuery({
     queryKey: CONFERENCE_BOOKINGS_QUERY_KEY,
     queryFn: getBookings,
-    initialData: ROOM_BOOKINGS,
+    initialData: BOOKINGS,
   });
-
-  return {
-    rooms: roomsQuery.data,
-    bookings: bookingsQuery.data,
-  };
 }
 
 export function useConferenceMutations() {

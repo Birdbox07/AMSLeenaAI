@@ -259,7 +259,9 @@ export default function DashboardPage({ onNavigate }) {
         </div>
       </div>
 
-     
+      <div className="animate-fade-in-up" style={{ animationDelay: "420ms" }}>
+        <HolidayCalendarGrid holidays={HOLIDAY_DATA}/>
+      </div>
     </div>
   );
 }
