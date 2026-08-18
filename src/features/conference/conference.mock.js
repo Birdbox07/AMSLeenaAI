@@ -17,9 +17,6 @@ export const CONFERENCE_LOCATIONS = [
 // Factory has no dedicated conference room in the supplied list.
 export const CONFERENCE_ROOMS_BY_LOCATION = {
   "Bangalore Corporate Office": [
-    "Conference Hall-02nd Floor-Next to Canteen",
-    "Conference Hall-02nd Floor-Retail & IT Wing",
-    "Conference Hall-11th Floor-Board Room",
     "First Floor-PUNARVASU-(Meeting Room)",
     "First Floor-RAMANUJAN-(Partition Room)",
     "Ground Floor-(Kanchi Meeting Room)",
