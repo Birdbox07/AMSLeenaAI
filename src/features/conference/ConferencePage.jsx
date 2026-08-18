@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, LayoutGrid, List, Plus, Pencil, X
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { Modal, FormField, inputCls } from "../../shared/components/Modal";
+import { SearchableSelect } from "../../shared/components/SearchableSelect";
 import { Btn } from "../../shared/components/Btn";
 import { useConferenceQuery, useConferenceMutations } from "./hooks/useConferenceQuery";
 import { validateBookingForm } from "./conference.validators";
@@ -12,8 +13,6 @@ import {
 } from "./conference.mock";
 import { useCurrentUser } from "../employees/hooks/useEmployees";
 import "./conference.css";
-
-const filterSelectCls = "border border-border rounded-md py-1.5 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[180px]";
 
 function fmtDate(d) {
   const yyyy = d.getFullYear();
@@ -174,19 +173,14 @@ export default function ConferencePage() {
       </div>
 
       <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-end gap-3 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 min-w-[220px]">
           <label className="text-xs font-semibold text-muted-foreground">Location</label>
-          <select value={location} onChange={e => changeLocation(e.target.value)} className={filterSelectCls}>
-            <option value="">Select location...</option>
-            {CONFERENCE_LOCATIONS.map(l => <option key={l}>{l}</option>)}
-          </select>
+          <SearchableSelect value={location} onChange={changeLocation} options={CONFERENCE_LOCATIONS} placeholder="Select location..."/>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 min-w-[280px]">
           <label className="text-xs font-semibold text-muted-foreground">Room</label>
-          <select value={room} onChange={e => setRoom(e.target.value)} disabled={!location} className={cn(filterSelectCls, "min-w-[260px] disabled:opacity-50")}>
-            <option value="">{location ? (roomsForLocation.length ? "Select room..." : "No rooms available") : "Select a location first"}</option>
-            {roomsForLocation.map(r => <option key={r}>{r}</option>)}
-          </select>
+          <SearchableSelect value={room} onChange={setRoom} options={roomsForLocation} disabled={!location}
+            placeholder={location ? (roomsForLocation.length ? "Select room..." : "No rooms available") : "Select a location first"}/>
         </div>
 
         <div className="flex gap-1 bg-muted p-1 rounded-lg ml-auto">
@@ -246,13 +240,23 @@ export default function ConferencePage() {
                   );
                 })}
 
-                {/* Time gutter */}
+                {/* Time gutter — first/last labels are clamped so they don't get
+                    clipped by the sticky header above or the grid's bottom edge */}
                 <div className="relative border-r border-border" style={{ height: GRID_HEIGHT }}>
-                  {HOUR_MARKS.map(m => (
-                    <span key={m} className="absolute right-1.5 -translate-y-1/2 text-[10px] text-muted-foreground whitespace-nowrap" style={{ top: (m - SLOT_START_MIN) * PX_PER_MIN }}>
-                      {minutesToLabel(m)}
-                    </span>
-                  ))}
+                  {HOUR_MARKS.map((m, i) => {
+                    const isFirst = i === 0;
+                    const isLast = i === HOUR_MARKS.length - 1;
+                    return (
+                      <span key={m}
+                        className={cn(
+                          "absolute right-1.5 text-[10px] font-medium text-foreground whitespace-nowrap",
+                          isFirst ? "" : isLast ? "-translate-y-full" : "-translate-y-1/2"
+                        )}
+                        style={{ top: (m - SLOT_START_MIN) * PX_PER_MIN }}>
+                        {minutesToLabel(m)}
+                      </span>
+                    );
+                  })}
                 </div>
 
                 {/* Day columns */}
