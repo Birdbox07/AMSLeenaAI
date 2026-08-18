@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Menu, X, Home, ChevronRight, Sun, Moon, Bell,
   ChevronDown, User, Settings, HelpCircle, LogOut, CheckCircle, Shield, Headphones, Clock, GraduationCap,
@@ -17,6 +17,17 @@ export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, o
   const [showUser, setShowUser] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const label = findNavLabel(module);
+  const notifRef = useRef(null);
+  const userRef = useRef(null);
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUser(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   return (
     <header className="h-[60px] bg-card border-b border-border flex items-center gap-3 px-4 sticky top-0 z-30 shadow-sm shrink-0">
@@ -35,7 +46,7 @@ export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, o
           {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
         </button>
 
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button onClick={() => { setShowNotif(v=>!v); setShowUser(false); }}
             className="p-2 rounded-full transition-colors relative bg-transparent border-0 cursor-pointer hover:bg-muted" title="Notifications">
             <Bell size={16}/>
@@ -66,7 +77,7 @@ export function TopNav({ module, darkMode, onDarkMode, onMenuToggle, showMenu, o
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative" ref={userRef}>
           <button onClick={() => { setShowUser(v=>!v); setShowNotif(false); }}
             className="flex items-center gap-2 py-1.5 pr-3 pl-2 rounded-full transition-colors bg-transparent border-0 cursor-pointer ml-1 hover:bg-muted">
             <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold">

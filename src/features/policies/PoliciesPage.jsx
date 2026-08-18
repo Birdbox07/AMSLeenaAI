@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Download, Pencil, UploadCloud, Folder, ChevronUp, ChevronDown, ChevronLeft, LayoutGrid, List } from "lucide-react";
+import { Plus, Download, Pencil, UploadCloud, Folder, ChevronUp, ChevronDown, ChevronLeft, LayoutGrid, List, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../shared/utils/cn";
 import { downloadTextFile } from "../../shared/utils/downloadTextFile";
@@ -10,7 +10,7 @@ import { Modal, FormField, inputCls } from "../../shared/components/Modal";
 import { SearchableSelect } from "../../shared/components/SearchableSelect";
 import { usePoliciesQuery, usePolicyMutations } from "./hooks/usePoliciesQuery";
 import { validatePolicyForm } from "./policies.validators";
-import { POLICY_TYPES, POLICY_FOLDERS_BY_TYPE } from "./policies.mock";
+import { POLICY_TYPES, POLICY_FOLDERS_BY_TYPE, SEEDED_POLICY_TYPES } from "./policies.mock";
 import { useHasRole } from "../../shared/access/role.store";
 import "./policies.css";
 
@@ -150,21 +150,29 @@ export default function PoliciesPage() {
               {foldersOpen ? <ChevronUp size={15}/> : <ChevronDown size={15}/>} Folders
             </button>
             {foldersOpen && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {folderNames.map((f, i) => (
-                  <button key={f} onClick={() => setSelectedFolder(f)}
-                    style={{ animationDelay: `${i*30}ms` }}
-                    className={cn("text-left bg-card rounded-lg border border-border shadow-sm p-4 flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:border-primary hover:-translate-y-0.5 cursor-pointer", "hover-lift", "animate-fade-in-up")}>
-                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <Folder size={20}/>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-foreground truncate">{f}</p>
-                      <p className="text-xs text-muted-foreground">{folderCounts[f] || 0} Article{folderCounts[f]===1?"":"s"}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              SEEDED_POLICY_TYPES.includes(policyType) ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {folderNames.map((f, i) => (
+                    <button key={f} onClick={() => setSelectedFolder(f)}
+                      style={{ animationDelay: `${i*30}ms` }}
+                      className={cn("text-left bg-card rounded-lg border border-border shadow-sm p-4 flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:border-primary hover:-translate-y-0.5 cursor-pointer", "hover-lift", "animate-fade-in-up")}>
+                      <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Folder size={20}/>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">{f}</p>
+                        <p className="text-xs text-muted-foreground">{folderCounts[f] || 0} Article{folderCounts[f]===1?"":"s"}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-16 text-muted-foreground">
+                  <Inbox size={32} className="opacity-30"/>
+                  <p className="font-medium">No policies added yet</p>
+                  <p className="text-xs">Policies added via Add Policy will appear here</p>
+                </div>
+              )
             )}
           </div>
         )
