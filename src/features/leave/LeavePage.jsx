@@ -79,7 +79,7 @@ function LeaveRequestsSection() {
   const reporteeIds = useMemo(() => new Set(MY_REPORTEES.map(e=>e.id)), [MY_REPORTEES]);
 
   const reporteeBalances = useMemo(() =>
-    MY_REPORTEES.map(emp => ({ emp, balances: getLeaveBalance(emp.id, leaves) })),
+    MY_REPORTEES.map(emp => ({ emp, balances: getLeaveBalance(emp.id, leaves).filter(b => b.type === "Casual Leave" || b.type === "Privilege Leave") })),
     [MY_REPORTEES, leaves]
   );
 
@@ -102,7 +102,10 @@ function LeaveRequestsSection() {
     Rejected: scoped.filter(l=>l.status==="Rejected").length,
   }), [scoped]);
 
-  const myBalance = useMemo(() => getLeaveBalance(CURRENT_USER.id, leaves), [CURRENT_USER, leaves]);
+  const myBalance = useMemo(() =>
+    getLeaveBalance(CURRENT_USER.id, leaves).filter(b => b.type === "Casual Leave" || b.type === "Privilege Leave"),
+    [CURRENT_USER, leaves]
+  );
 
   const sessionSummary = (r) => {
     if (r.session) return r.session;
