@@ -8,6 +8,7 @@ import { useConferenceQuery, useConferenceMutations } from "./hooks/useConferenc
 import { validateBookingForm } from "./conference.validators";
 import {
   CONFERENCE_LOCATIONS, CONFERENCE_ROOMS_BY_LOCATION, MEAL_OPTIONS, TIME_SLOTS, minutesToLabel,
+  SLOT_START_MIN, SLOT_END_MIN, SLOT_INCREMENT_MIN,
 } from "./conference.mock";
 import { useCurrentUser } from "../employees/hooks/useEmployees";
 import "./conference.css";
@@ -30,6 +31,18 @@ function isPastSlot(dateStr, slotStart) {
 }
 
 const emptyForm = { date: "", start: null, end: null, purpose: "", attendees: "", breakfast: "Not Required", tea: "Not Required", lunch: "Not Required" };
+
+// Teams/Outlook-style continuous time grid: 1px per minute, events rendered
+// as absolutely-positioned blocks spanning their real duration instead of
+// one row per 15-minute slot.
+const PX_PER_MIN = 1;
+const GRID_HEIGHT = (SLOT_END_MIN - SLOT_START_MIN) * PX_PER_MIN;
+const HOUR_MARKS = (() => {
+  const marks = [];
+  for (let m = SLOT_START_MIN; m <= SLOT_END_MIN; m += 60) marks.push(m);
+  return marks;
+})();
+const HALF_HOUR_MARKS = HOUR_MARKS.slice(0, -1).map(m => m + 30);
 
 export default function ConferencePage() {
   const { data: bookings } = useConferenceQuery();
@@ -72,6 +85,24 @@ export default function ConferencePage() {
   }, [weekOffset]);
 
   const todayStr = fmtDate(new Date());
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const showNowLine = nowMinutes >= SLOT_START_MIN && nowMinutes <= SLOT_END_MIN;
+  const nowTop = (nowMinutes - SLOT_START_MIN) * PX_PER_MIN;
+
+  const handleColumnClick = (e, dStr) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const minutesFromStart = Math.max(0, Math.floor(offsetY / PX_PER_MIN));
+    const slotStart = Math.min(
+      SLOT_START_MIN + Math.floor(minutesFromStart / SLOT_INCREMENT_MIN) * SLOT_INCREMENT_MIN,
+      SLOT_END_MIN - SLOT_INCREMENT_MIN
+    );
+    if (isPastSlot(dStr, slotStart)) return;
+    const existing = findBooking(dStr, slotStart);
+    if (existing) { if (isMyBooking(existing)) openEditModal(existing); return; }
+    openAddModal(dStr, slotStart, slotStart + SLOT_INCREMENT_MIN);
+  };
 
   const changeLocation = (val) => {
     setLocation(val);
@@ -200,86 +231,109 @@ export default function ConferencePage() {
           {!hasSelection ? (
             <p className="text-sm text-muted-foreground text-center py-16">Select a location and room to view the calendar</p>
           ) : (
-            <div className="overflow-auto max-h-[480px] border-t border-border">
-              <table className="border-collapse w-full text-[10px] select-none" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ width: "56px" }}/>
-                  {weekDates.map((_, i) => <col key={i}/>)}
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className="sticky top-0 left-0 z-20 bg-muted py-1.5 text-[10px] font-semibold text-foreground border-b border-r border-border">Time</th>
-                    {weekDates.map((d, i) => {
-                      const dStr = fmtDate(d);
-                      const today = dStr === todayStr;
-                      return (
-                        <th key={i} className={cn("sticky top-0 z-10 py-1.5 px-1 text-center border-b border-border font-semibold", today ? "bg-primary/10 text-primary" : "bg-muted text-foreground")}>
-                          {d.toLocaleDateString("en", { weekday: "short" })}
-                          <span className="block font-normal text-muted-foreground text-[9px]">{dStr.slice(5)}</span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TIME_SLOTS.map((slot, rowIdx) => (
-                    <tr key={slot.start}>
-                      <td className="sticky left-0 z-10 bg-muted text-center text-[9px] text-muted-foreground border-r border-b border-border whitespace-nowrap px-1" style={{ height: "16px" }}>
-                        {slot.label}
-                      </td>
-                      {weekDates.map((d, dayIdx) => {
-                        const dStr = fmtDate(d);
-                        const past = isPastSlot(dStr, slot.start);
-                        const booking = findBooking(dStr, slot.start);
-                        const mine = isMyBooking(booking);
+            <div className="overflow-auto border-t border-border" style={{ maxHeight: 560 }}>
+              <div className="grid select-none" style={{ gridTemplateColumns: `56px repeat(7, minmax(120px, 1fr))` }}>
+                {/* Header row */}
+                <div className="sticky top-0 left-0 z-20 bg-muted border-b border-r border-border"/>
+                {weekDates.map((d, i) => {
+                  const dStr = fmtDate(d);
+                  const today = dStr === todayStr;
+                  return (
+                    <div key={i} className={cn("sticky top-0 z-10 py-2 px-1 text-center border-b border-border", today ? "bg-primary/10 text-primary" : "bg-muted text-foreground")}>
+                      <span className="block text-xs font-semibold">{d.toLocaleDateString("en", { weekday: "short" })}</span>
+                      <span className="block text-[10px] font-normal text-muted-foreground">{dStr.slice(5)}</span>
+                    </div>
+                  );
+                })}
 
+                {/* Time gutter */}
+                <div className="relative border-r border-border" style={{ height: GRID_HEIGHT }}>
+                  {HOUR_MARKS.map(m => (
+                    <span key={m} className="absolute right-1.5 -translate-y-1/2 text-[10px] text-muted-foreground whitespace-nowrap" style={{ top: (m - SLOT_START_MIN) * PX_PER_MIN }}>
+                      {minutesToLabel(m)}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Day columns */}
+                {weekDates.map((d, dayIdx) => {
+                  const dStr = fmtDate(d);
+                  const dayIsPast = dStr < todayStr;
+                  const dayBookings = scopedBookings.filter(b => b.date === dStr);
+                  return (
+                    <div key={dayIdx}
+                      onClick={(e) => !dayIsPast && handleColumnClick(e, dStr)}
+                      className={cn("relative border-r border-border", dayIsPast ? "bg-muted/40 cursor-not-allowed" : "cursor-pointer hover:bg-primary/5")}
+                      style={{ height: GRID_HEIGHT }}
+                    >
+                      {HOUR_MARKS.map(m => (
+                        <div key={m} className="absolute left-0 right-0 border-t border-border pointer-events-none" style={{ top: (m - SLOT_START_MIN) * PX_PER_MIN }}/>
+                      ))}
+                      {HALF_HOUR_MARKS.map(m => (
+                        <div key={m} className="absolute left-0 right-0 border-t border-dashed border-border/60 pointer-events-none" style={{ top: (m - SLOT_START_MIN) * PX_PER_MIN }}/>
+                      ))}
+
+                      {dStr === todayStr && showNowLine && (
+                        <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowTop }}>
+                          <div className="relative h-0 border-t-2 border-red-500">
+                            <span className="absolute -left-1 -top-[5px] w-2.5 h-2.5 rounded-full bg-red-500"/>
+                          </div>
+                        </div>
+                      )}
+
+                      {dStr === todayStr && nowTop > 0 && (
+                        <div className="absolute left-0 right-0 top-0 bg-muted/40 pointer-events-none" style={{ height: Math.min(nowTop, GRID_HEIGHT) }}/>
+                      )}
+
+                      {dayBookings.map(b => {
+                        const top = (b.start - SLOT_START_MIN) * PX_PER_MIN;
+                        const height = Math.max((b.end - b.start) * PX_PER_MIN, 18);
+                        const mine = isMyBooking(b);
                         return (
-                          <td key={dayIdx}
-                            onClick={() => {
-                              if (past) return;
-                              if (booking) { if (mine) openEditModal(booking); return; }
-                              openAddModal(dStr, slot.start, slot.end);
-                            }}
+                          <div key={b.id}
+                            onClick={(e) => { e.stopPropagation(); if (mine) openEditModal(b); }}
                             className={cn(
-                              "relative border border-border p-0 group",
-                              past && "bg-muted cursor-not-allowed",
-                              !past && !booking && "bg-card hover:bg-primary/10 cursor-pointer",
-                              !past && booking && !mine && "bg-red-100 dark:bg-red-900/30 cursor-not-allowed",
-                              !past && booking && mine && "bg-yellow-100 dark:bg-yellow-900/30 cursor-pointer hover:opacity-80"
+                              "group absolute left-0.5 right-0.5 z-10 rounded-md border px-1.5 py-1 shadow-sm transition-shadow hover:shadow-md hover:z-20",
+                              mine ? "bg-yellow-100 border-yellow-300 cursor-pointer dark:bg-yellow-900/40 dark:border-yellow-700" : "bg-red-100 border-red-300 cursor-not-allowed dark:bg-red-900/40 dark:border-red-700"
                             )}
-                            style={{ height: "16px" }}
+                            style={{ top, height }}
                           >
-                            {booking && (
-                              <div className={cn(
-                                "hidden group-hover:block absolute z-30 left-1/2 -translate-x-1/2 w-56 bg-popover border border-border rounded-lg shadow-xl p-2.5 text-left text-xs",
-                                rowIdx < 3 ? "top-full mt-1" : "bottom-full mb-1"
-                              )}>
-                                <p className="font-semibold text-foreground text-[11px]">{dStr} · {minutesToLabel(booking.start)}–{minutesToLabel(booking.end)}</p>
-                                <p className="flex items-center gap-1.5 text-muted-foreground mt-1"><UserIcon size={11}/> {booking.employeeName}</p>
-                                {booking.contact && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5"><Phone size={11}/> {booking.contact}</p>}
-                                {booking.email && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5 truncate"><Mail size={11}/> {booking.email}</p>}
-                                <p className="italic text-muted-foreground mt-1.5 pt-1.5 border-t border-border">{booking.purpose}</p>
-                                {mine && (
-                                  <div className="flex justify-end gap-1.5 mt-1.5 pt-1.5 border-t border-border">
-                                    <button onClick={(e) => { e.stopPropagation(); openEditModal(booking); }}
-                                      className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-primary text-primary-foreground border-none cursor-pointer">
-                                      <Pencil size={9}/> Edit
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); cancel(booking.id); toast.success("Booking cancelled"); }}
-                                      className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-destructive text-white border-none cursor-pointer">
-                                      <X size={9}/> Cancel
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
+                            <p className={cn("text-[10px] font-semibold leading-tight truncate", mine ? "text-yellow-900 dark:text-yellow-200" : "text-red-800 dark:text-red-200")}>
+                              {minutesToLabel(b.start)}–{minutesToLabel(b.end)}
+                            </p>
+                            <p className={cn("text-[10px] leading-tight truncate", mine ? "text-yellow-800 dark:text-yellow-300" : "text-red-700 dark:text-red-300")}>
+                              {b.employeeName}
+                            </p>
+
+                            <div className={cn(
+                              "hidden group-hover:block absolute z-30 left-1/2 -translate-x-1/2 w-56 bg-popover border border-border rounded-lg shadow-xl p-2.5 text-left text-xs",
+                              top < 200 ? "top-full mt-1" : "bottom-full mb-1"
+                            )}>
+                              <p className="font-semibold text-foreground text-[11px]">{dStr} · {minutesToLabel(b.start)}–{minutesToLabel(b.end)}</p>
+                              <p className="flex items-center gap-1.5 text-muted-foreground mt-1"><UserIcon size={11}/> {b.employeeName}</p>
+                              {b.contact && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5"><Phone size={11}/> {b.contact}</p>}
+                              {b.email && <p className="flex items-center gap-1.5 text-muted-foreground mt-0.5 truncate"><Mail size={11}/> {b.email}</p>}
+                              <p className="italic text-muted-foreground mt-1.5 pt-1.5 border-t border-border">{b.purpose}</p>
+                              {mine && (
+                                <div className="flex justify-end gap-1.5 mt-1.5 pt-1.5 border-t border-border">
+                                  <button onClick={(e) => { e.stopPropagation(); openEditModal(b); }}
+                                    className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-primary text-primary-foreground border-none cursor-pointer">
+                                    <Pencil size={9}/> Edit
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); cancel(b.id); toast.success("Booking cancelled"); }}
+                                    className="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium rounded bg-destructive text-white border-none cursor-pointer">
+                                    <X size={9}/> Cancel
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

@@ -48,7 +48,7 @@ export const POLICY_FOLDERS_BY_TYPE = {
 // Only HR Policies ships with seed documents — IT Policies and Company
 // Policies start empty (folders still defined above for the folder grid,
 // just with 0 articles) until real documents are added via Add Policy.
-const SEEDED_POLICY_TYPES = ["HR Policies"];
+export const SEEDED_POLICY_TYPES = ["HR Policies"];
 
 export function genPolicies() {
   const policies = [];

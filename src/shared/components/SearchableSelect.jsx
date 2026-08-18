@@ -41,7 +41,7 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Sele
         disabled={disabled}
         onClick={() => setOpen(o => !o)}
         className={cn(
-          "w-full flex items-center justify-between border border-border rounded-md py-2 px-3 text-sm bg-input-background focus:outline-none focus:ring-2 focus:ring-ring text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full flex items-center justify-between border border-border rounded-md py-2 px-3 text-sm font-normal bg-input-background focus:outline-none focus:ring-2 focus:ring-ring text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       >
@@ -70,7 +70,7 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Sele
                   type="button"
                   onClick={() => { onChange(o.value); setOpen(false); setQuery(""); }}
                   className={cn(
-                    "w-full text-left px-3 py-2 text-sm bg-transparent border-none cursor-pointer transition-colors hover:bg-secondary",
+                    "w-full text-left px-3 py-2 text-sm font-normal bg-transparent border-none cursor-pointer transition-colors hover:bg-secondary",
                     o.value === value && "bg-secondary font-medium"
                   )}
                 >
