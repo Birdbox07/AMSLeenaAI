@@ -50,11 +50,13 @@ export default function HolidaysPage() {
       <div className="flex items-center justify-between flex-wrap gap-2 animate-fade-in-up" style={{ animationDelay: "0ms" }}>
         <h2 className="text-lg font-bold text-foreground">Holiday Calendar</h2>
         <div className="flex bg-muted p-1 rounded-lg gap-1">
-          <button onClick={() => setView("table")} className={cn("flex items-center gap-1.5 py-1 px-3 text-xs font-medium rounded-sm transition-colors text-muted-foreground bg-transparent border-none cursor-pointer", view==="table" && "bg-card shadow-sm text-foreground")}>
-            <List size={12}/> Table
+          <button onClick={() => setView("table")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-4 text-sm font-medium rounded-md transition-colors border-none cursor-pointer", view==="table" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <List size={13}/> Table
           </button>
-          <button onClick={() => setView("calendar")} className={cn("flex items-center gap-1.5 py-1 px-3 text-xs font-medium rounded-sm transition-colors text-muted-foreground bg-transparent border-none cursor-pointer", view==="calendar" && "bg-card shadow-sm text-foreground")}>
-            <CalendarDays size={12}/> Calendar
+          <button onClick={() => setView("calendar")}
+            className={cn("flex items-center gap-1.5 py-1.5 px-4 text-sm font-medium rounded-md transition-colors border-none cursor-pointer", view==="calendar" ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground bg-transparent")}>
+            <CalendarDays size={13}/> Calendar
           </button>
         </div>
       </div>
