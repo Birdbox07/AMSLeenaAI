@@ -172,7 +172,7 @@ export default function ConferencePage() {
         </Btn>
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-end gap-3 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+      <div className="relative z-10 bg-card rounded-lg border border-border p-4 flex flex-wrap items-end gap-3 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
         <div className="flex flex-col gap-1 min-w-[220px]">
           <label className="text-xs font-semibold text-muted-foreground">Location</label>
           <SearchableSelect value={location} onChange={changeLocation} options={CONFERENCE_LOCATIONS} placeholder="Select location..."/>
